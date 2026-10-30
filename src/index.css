@@ -1,0 +1,644 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Android & Mobile Low-End Optimizations */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  overscroll-behavior-y: contain;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Off-screen list optimization for low-end devices */
+.optimize-rendering {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 120px;
+}
+
+/* Hardware accelerated smooth scrolling without layout thrashing */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+
+/* --------------------------------------------------------------------------
+   Guyub Rukun mobile experience polish
+   Scoped to the mobile shell so the desktop dashboard remains unchanged.
+   -------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+  --gr-brand: #0d9488;
+  --gr-brand-dark: #0f766e;
+  --gr-ink: #122b35;
+  --gr-muted: #64748b;
+  --gr-surface: #ffffff;
+  --gr-canvas: #f5faf9;
+  --gr-border: #e5efed;
+  --gr-shadow-soft: 0 8px 24px rgba(15, 68, 65, 0.055);
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: var(--gr-canvas);
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100%;
+  background: var(--gr-canvas);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+@media (max-width: 767px) {
+  #root {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .gr-mobile-app {
+    width: 100%;
+    height: 100dvh !important;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    background: var(--gr-canvas) !important;
+    isolation: isolate;
+    overscroll-behavior: none;
+  }
+
+  .gr-mobile-app > .flex-grow.overflow-hidden {
+    min-height: 0;
+  }
+
+  .gr-mobile-header {
+    flex: 0 0 auto;
+    min-height: 62px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-bottom: 11px;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    background: rgba(255, 255, 255, 0.94) !important;
+    border-bottom: 1px solid rgba(13, 148, 136, 0.09) !important;
+    box-shadow: 0 4px 18px rgba(15, 58, 63, 0.035) !important;
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+  }
+
+  .gr-mobile-header button {
+    min-width: 42px;
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gr-mobile-profile {
+    flex: 0 0 auto;
+    margin: 12px 14px 14px !important;
+    padding: 17px 17px !important;
+    border: 1px solid rgba(13, 148, 136, 0.11) !important;
+    border-radius: 24px !important;
+    background: linear-gradient(135deg, #effcf8 0%, #e5f7f0 54%, #f1fbf6 100%) !important;
+    box-shadow: 0 10px 24px rgba(15, 118, 110, 0.065) !important;
+  }
+
+  .gr-mobile-profile h2 {
+    max-width: 100%;
+    font-size: clamp(18px, 5vw, 22px) !important;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .gr-mobile-profile p {
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .gr-profile-link {
+    min-height: 26px;
+    transition: background-color 160ms ease, transform 160ms ease;
+  }
+
+  .gr-mobile-profile:active .gr-profile-link {
+    background: #dff7ef;
+    transform: translateY(1px);
+  }
+
+  .gr-mobile-profile img,
+  .gr-mobile-profile > div > div {
+    flex-shrink: 0;
+  }
+
+  .gr-mobile-page-scroll {
+    min-height: 0;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    background: var(--gr-canvas);
+    padding-bottom: calc(108px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .gr-mobile-page-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .gr-mobile-bottom-nav {
+    position: fixed !important;
+    left: max(10px, env(safe-area-inset-left)) !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    min-height: 68px;
+    padding: 8px 7px !important;
+    border: 1px solid rgba(220, 235, 232, 0.95) !important;
+    border-radius: 23px !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+    box-shadow: 0 10px 36px rgba(16, 54, 60, 0.14), 0 2px 8px rgba(16, 54, 60, 0.05) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    backdrop-filter: blur(20px) saturate(150%);
+    gap: 4px;
+  }
+
+  .gr-mobile-nav-item {
+    flex: 1 1 0;
+    width: auto !important;
+    min-width: 0;
+    min-height: 50px;
+    padding: 7px 3px !important;
+    gap: 3px !important;
+    border-radius: 16px !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .gr-mobile-nav-item:focus-visible {
+    outline: 2px solid var(--gr-brand);
+    outline-offset: 2px;
+  }
+
+  .gr-mobile-nav-item.is-active {
+    color: var(--gr-brand-dark) !important;
+  }
+
+  .gr-mobile-nav-item.is-active > span:last-child {
+    font-size: 10px !important;
+    letter-spacing: -0.01em;
+  }
+
+  .gr-mobile-nav-item svg {
+    width: 21px !important;
+    height: 21px !important;
+  }
+
+  .gr-quick-actions {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    margin-bottom: 24px !important;
+  }
+
+  .gr-quick-actions > div:first-child {
+    min-height: 32px;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .gr-quick-actions > div:first-child h3 {
+    font-size: 15px !important;
+    letter-spacing: -0.025em;
+  }
+
+  .gr-quick-actions-card {
+    padding: 16px 10px !important;
+    border-color: rgba(226, 238, 235, 0.95) !important;
+    border-radius: 23px !important;
+    box-shadow: var(--gr-shadow-soft) !important;
+  }
+
+  .gr-quick-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px 4px !important;
+  }
+
+  .gr-quick-action {
+    min-width: 0;
+    min-height: 78px;
+    padding: 2px 0;
+    gap: 8px !important;
+    border-radius: 14px;
+  }
+
+  .gr-quick-action:focus-visible {
+    outline: 2px solid rgba(13, 148, 136, 0.6);
+    outline-offset: 3px;
+  }
+
+  .gr-quick-action > div:first-child {
+    width: 50px !important;
+    height: 50px !important;
+    padding: 11px !important;
+    border-radius: 17px !important;
+    box-shadow: 0 6px 13px rgba(15, 118, 110, 0.13) !important;
+  }
+
+  .gr-quick-action > div:first-child svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  .gr-quick-action > span {
+    max-width: 72px;
+    min-height: 24px;
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+    overflow-wrap: anywhere;
+  }
+
+  /* Form controls become easier to tap and easier to identify on phones. */
+  .gr-mobile-page-scroll input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="color"]):not([type="image"]),
+  .gr-mobile-page-scroll select,
+  .gr-mobile-page-scroll textarea {
+    max-width: 100%;
+    border-radius: 12px;
+  }
+
+  .gr-mobile-page-scroll input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="color"]):not([type="image"]),
+  .gr-mobile-page-scroll select {
+    min-height: 43px;
+  }
+
+  .gr-mobile-page-scroll textarea {
+    min-height: 92px;
+  }
+
+  .gr-mobile-page-scroll input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]):focus,
+  .gr-mobile-page-scroll select:focus,
+  .gr-mobile-page-scroll textarea:focus {
+    outline: 2px solid rgba(13, 148, 136, 0.18);
+    outline-offset: 1px;
+  }
+
+  /* Prevent long tables and long labels from widening the viewport. */
+  .gr-mobile-page-scroll table {
+    max-width: 100%;
+  }
+
+  .gr-mobile-page-scroll img,
+  .gr-mobile-page-scroll video,
+  .gr-mobile-page-scroll canvas {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .gr-mobile-profile {
+    margin-left: 10px !important;
+    margin-right: 10px !important;
+    padding: 14px !important;
+  }
+
+  .gr-mobile-bottom-nav {
+    left: 7px !important;
+    right: 7px !important;
+    gap: 1px;
+  }
+
+  .gr-mobile-nav-item {
+    padding-left: 1px !important;
+    padding-right: 1px !important;
+  }
+
+  .gr-mobile-nav-item > span:last-child {
+    font-size: 8px !important;
+  }
+
+  .gr-quick-actions {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .gr-quick-actions-card {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+
+  .gr-quick-action > div:first-child {
+    width: 46px !important;
+    height: 46px !important;
+    padding: 9px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Guyub Rukun — Mobile Data Warga: responsive, touch-friendly and smooth UI
+   -------------------------------------------------------------------------- */
+.mobile-data-warga-page {
+  width: 100%;
+  max-width: 1440px;
+  min-width: 0;
+  margin-inline: auto;
+  box-sizing: border-box;
+  overflow-x: clip;
+  padding-bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px));
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-data-warga-page,
+.mobile-data-warga-page * {
+  box-sizing: border-box;
+}
+
+.mobile-data-warga-page button,
+.mobile-data-warga-page input,
+.mobile-data-warga-page select,
+.mobile-data-warga-page textarea {
+  touch-action: manipulation;
+}
+
+.mobile-data-warga-page input,
+.mobile-data-warga-page select,
+.mobile-data-warga-page textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.mobile-data-warga-page button {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.mobile-data-warga-page .overflow-x-auto {
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.mobile-data-warga-page .mobile-warga-card {
+  min-width: 0;
+  transform: translateZ(0);
+  transition: border-color 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              box-shadow 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.mobile-data-warga-page .mobile-warga-card-header,
+.mobile-data-warga-page .mobile-warga-summary-row,
+.mobile-data-warga-page .mobile-warga-summary-badges {
+  min-width: 0;
+}
+
+.mobile-data-warga-page .mobile-warga-card-header h5,
+.mobile-data-warga-page .mobile-warga-card-header span,
+.mobile-data-warga-page .mobile-warga-card p {
+  overflow-wrap: anywhere;
+}
+
+.mobile-data-warga-page .mobile-data-warga-toolbar,
+.mobile-data-warga-page .mobile-data-warga-filter-row,
+.mobile-data-warga-page .mobile-data-warga-toolbar-actions {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .mobile-data-warga-page {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-top: 12px !important;
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-header {
+    align-items: flex-start;
+    row-gap: 10px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-header > button:first-child {
+    min-height: 42px;
+    padding-inline: 13px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-header-actions {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-header-actions > button {
+    min-height: 42px;
+    flex: 1 1 100%;
+    justify-content: center;
+    border-radius: 14px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-role-badge,
+  .mobile-data-warga-page .mobile-data-warga-total-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-title {
+    font-size: clamp(1.2rem, 5vw, 1.55rem);
+    line-height: 1.25;
+    margin-bottom: 12px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-primary-actions > button {
+    min-height: 48px;
+    justify-content: center;
+    border-radius: 16px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-toolbar {
+    margin-bottom: 16px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-toolbar input[type="text"],
+  .mobile-data-warga-page .mobile-data-warga-toolbar select {
+    min-height: 46px;
+    font-size: 16px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-toolbar-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-toolbar-actions > * {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-toolbar-actions button {
+    min-height: 44px;
+    padding-inline: 9px;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-filter-row > div:first-child {
+    width: 100%;
+  }
+
+  .mobile-data-warga-page .mobile-warga-list {
+    gap: 12px;
+  }
+
+  .mobile-data-warga-page .mobile-warga-card {
+    border-radius: 22px;
+    box-shadow: 0 3px 14px rgba(15, 23, 42, 0.055);
+  }
+
+  .mobile-data-warga-page .mobile-warga-card-header {
+    padding: 13px;
+    gap: 11px;
+  }
+
+  .mobile-data-warga-page .mobile-warga-summary-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 9px;
+  }
+
+  .mobile-data-warga-page .mobile-warga-summary-badges {
+    width: 100%;
+    gap: 5px;
+  }
+
+  .mobile-data-warga-page .mobile-warga-summary-row > div:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 7px;
+  }
+
+  .mobile-data-warga-page .mobile-warga-summary-row > div:last-child button {
+    min-height: 38px;
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .mobile-data-warga-page .mobile-warga-card .px-4.pb-4 {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .mobile-data-warga-page .mobile-warga-card .grid-cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mobile-data-warga-page .mobile-warga-card .min-w-\[120px\] {
+    min-width: 0;
+  }
+
+  .mobile-data-warga-page .mobile-warga-card button,
+  .mobile-data-warga-page .mobile-warga-card select {
+    min-height: 38px;
+  }
+
+  .mobile-data-warga-page table {
+    min-width: 620px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-toolbar .flex.items-center.justify-between {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-data-warga-page {
+    padding-left: 9px !important;
+    padding-right: 9px !important;
+  }
+
+  .mobile-data-warga-page .mobile-warga-card-header {
+    padding: 11px;
+    gap: 9px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-toolbar-actions button {
+    font-size: 11px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-total-badge,
+  .mobile-data-warga-page .mobile-data-warga-role-badge {
+    font-size: 9px;
+    padding-inline: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-data-warga-page .mobile-warga-card,
+  .mobile-data-warga-page button {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .mobile-data-warga-page .mobile-kk-region-modal {
+    max-height: calc(100dvh - 8px - env(safe-area-inset-top, 0px));
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .mobile-data-warga-page .mobile-kk-region-modal .grid-cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mobile-data-warga-page .mobile-kk-region-modal input,
+  .mobile-data-warga-page .mobile-kk-region-modal select,
+  .mobile-data-warga-page .mobile-kk-region-modal textarea {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .mobile-data-warga-page .mobile-kk-region-modal > .shrink-0.border-t {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+}
