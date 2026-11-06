@@ -5610,66 +5610,88 @@ const RtSelection = ({ onSelectRt }: { onSelectRt: (rt: string) => void }) => {
 };
 
 const SplashScreen = ({ onFinish }: { onFinish: () => void, key?: string }) => {
+  const prefersReducedMotion = typeof window !== 'undefined'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   useEffect(() => {
-    const timer = setTimeout(onFinish, 0); // Remove artificial delay
-    return () => clearTimeout(timer);
+    // Durasi dibuat singkat agar animasi terasa premium tanpa memperlambat akses.
+    const timer = window.setTimeout(onFinish, prefersReducedMotion ? 1100 : 2700);
+    return () => window.clearTimeout(timer);
+    // onFinish berasal dari parent dan tidak perlu mengulang timer setiap render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const enterDuration = prefersReducedMotion ? 0.01 : 0.68;
+  const textDuration = prefersReducedMotion ? 0.01 : 0.42;
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 1 }}
-      exit={{ opacity: 0, scale: 1.05, filter: "blur(5px)" }}
-      transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="fixed inset-0 bg-gradient-to-br from-teal-500 via-teal-600 to-emerald-700 z-[9999] flex flex-col items-center justify-center overflow-hidden"
+      exit={{ opacity: 0, scale: prefersReducedMotion ? 1 : 1.025 }}
+      transition={{ duration: prefersReducedMotion ? 0.01 : 0.28, ease: 'easeInOut' }}
+      className="mobile-splash-screen fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden"
+      role="status"
+      aria-label="Memuat aplikasi Guyub Rukun"
     >
-      <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-[0.05] rounded-full translate-x-20 -translate-y-20 blur-2xl"></div>
-      <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-300 opacity-20 rounded-full -translate-x-16 translate-y-16 blur-2xl"></div>
-      
+      <div className="mobile-splash-glow mobile-splash-glow-top" aria-hidden="true" />
+      <div className="mobile-splash-glow mobile-splash-glow-bottom" aria-hidden="true" />
+      <div className="mobile-splash-orbit" aria-hidden="true" />
+
       <motion.div
-        initial={{ y: 40, opacity: 0, scale: 0.9 }}
-        animate={{ y: 0, opacity: 1, scale: 1 }}
-        transition={{ delay: 0.2, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="w-48 h-48 sm:w-56 sm:h-56 relative mb-8 rounded-[2rem] overflow-hidden shadow-2xl flex items-center justify-center ring-4 ring-white/20 bg-[#16b3a0]"
+        initial={{ y: prefersReducedMotion ? 0 : 26, opacity: 0, scale: prefersReducedMotion ? 1 : 0.82, rotate: prefersReducedMotion ? 0 : -5 }}
+        animate={{ y: 0, opacity: 1, scale: 1, rotate: 0 }}
+        transition={{ delay: prefersReducedMotion ? 0 : 0.08, duration: enterDuration, ease: [0.16, 1, 0.3, 1] }}
+        className="mobile-splash-logo-shell relative mb-7 flex items-center justify-center"
       >
-        <img 
-          src="/splash-logo.png" 
-          alt="Guyub Rukun Logo" 
-          className="w-full h-full object-contain"
+        <img
+          src="/splash-logo.png"
+          alt="Logo Guyub Rukun"
+          className="mobile-splash-logo h-full w-full object-contain"
+          fetchPriority="high"
         />
       </motion.div>
 
-      <motion.h1 
-        initial={{ opacity: 0, y: 15 }}
+      <motion.h1
+        initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6, duration: 0.6 }}
-        className="text-3xl font-extrabold text-white tracking-widest text-center"
+        transition={{ delay: prefersReducedMotion ? 0 : 0.48, duration: textDuration }}
+        className="mobile-splash-title text-center font-extrabold text-white"
       >
         GUYUB RUKUN
       </motion.h1>
+
       <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.9, duration: 0.6 }}
-        className="text-teal-100 text-sm mt-3 font-medium tracking-wide"
+        initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 7 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: prefersReducedMotion ? 0 : 0.68, duration: textDuration }}
+        className="mobile-splash-subtitle mt-2 text-center font-medium"
       >
         Menghubungkan Warga RT {((localStorage.getItem('selected_rt') || 'rt01').replace('rt', '')).padStart(2, '0')}
       </motion.p>
-      
-      <motion.div 
+
+      <motion.div
         initial={{ width: 0, opacity: 0 }}
-        animate={{ width: "160px", opacity: 1 }}
-        transition={{ delay: 1.2, duration: 0.8, ease: "easeInOut" }}
-        className="h-1.5 bg-white/20 rounded-full mt-10 overflow-hidden relative"
+        animate={{ width: 156, opacity: 1 }}
+        transition={{ delay: prefersReducedMotion ? 0 : 0.42, duration: prefersReducedMotion ? 0.01 : 0.3 }}
+        className="mobile-splash-progress mt-9 overflow-hidden rounded-full"
+        aria-hidden="true"
       >
-         <motion.div 
-           initial={{ width: 0 }}
-           animate={{ width: "100%" }}
-           transition={{ duration: 2.2, ease: "easeInOut" }}
-           className="absolute top-0 left-0 bottom-0 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.8)]"
-         />
+        <motion.div
+          initial={{ width: '0%' }}
+          animate={{ width: '100%' }}
+          transition={{ delay: prefersReducedMotion ? 0 : 0.48, duration: prefersReducedMotion ? 0.01 : 2.0, ease: 'easeInOut' }}
+          className="mobile-splash-progress-fill h-full rounded-full"
+        />
       </motion.div>
+
+      <motion.span
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.72 }}
+        transition={{ delay: prefersReducedMotion ? 0 : 0.92, duration: textDuration }}
+        className="mobile-splash-caption mt-3 text-[10px] font-semibold tracking-[0.22em]"
+      >
+        BERSAMA MEMBANGUN LINGKUNGAN
+      </motion.span>
     </motion.div>
   );
 };
@@ -5686,7 +5708,12 @@ export default function App() {
   const [selectedRt, setSelectedRt] = useState<string>(() => localStorage.getItem('selected_rt') || '');
   const [authView, setAuthView] = useState<'login' | 'register'>('login');
   const [authNotice, setAuthNotice] = useState('');
-  const [showSplash, setShowSplash] = useState(false);
+  // Tampilkan splash hanya saat aplikasi dibuka pada layar mobile.
+  // State ini dihitung saat startup sehingga tidak muncul saat navigasi antar-menu.
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 767px)').matches;
+  });
   const [showAuthFlow, setShowAuthFlow] = useState(false);
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window !== 'undefined') {
