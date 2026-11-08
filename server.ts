@@ -437,7 +437,14 @@ const TenantSchema = new mongoose.Schema({
   packageTier: { type: String, enum: ['Free', 'VIP'], default: 'Free' },
   statusLangganan: { type: Boolean, default: true },
   expiredAt: { type: Date, default: () => new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) }, // Default 1 tahun
-  isVip: { type: Boolean, default: false }
+  isVip: { type: Boolean, default: false },
+  // Serah-terima jabatan Ketua RT hanya dapat dilakukan sekali seumur hidup tenant/RT.
+  ketuaRoleTransferUsed: { type: Boolean, default: false },
+  ketuaRoleTransferredAt: { type: Date },
+  ketuaRoleTransferredFromId: { type: String },
+  ketuaRoleTransferredFromName: { type: String },
+  ketuaRoleTransferredToId: { type: String },
+  ketuaRoleTransferredToName: { type: String }
 }, { timestamps: true });
 
 const TenantModel: mongoose.Model<any> = mongoose.models.Tenant || mongoose.model("Tenant", TenantSchema);
@@ -1068,28 +1075,39 @@ async function initDb(rtId: string = '') {
       namaKetua = "Ketua RT 03";
     }
 
-    // Clean duplicate admins
-    let cleanedList = list.filter((u: any) => u.role !== 'admin' || u.username === adminUsername);
-    if (cleanedList.length !== list.length) {
-      list = cleanedList;
-      await saveUsers(rtId, list);
-    }
+    // Setelah serah-terima satu kali digunakan, jangan hapus Ketua RT baru
+    // dan jangan hidupkan kembali akun Ketua RT bawaan saat server restart.
+    const roleTransferState = await TenantModel.findOne({ rtId: rtId || 'rt01' })
+      .select('ketuaRoleTransferUsed')
+      .lean();
+    const hasCompletedKetuaTransfer = roleTransferState?.ketuaRoleTransferUsed === true;
 
-    const adminId = "admin_" + adminUsername;
-    const existingAdmin = await UserModel.findOne({ $or: [{ id: adminId }, { username: adminUsername }] });
-    if (!existingAdmin) {
-      await UserModel.create({
-        id: adminId,
-        username: adminUsername,
-        password: hashPassword(adminPassword),
-        nama: namaKetua,
-        role: "admin",
-        alamat: "Jl. Bahagia No. 12, Kompleks Rukun",
-        noHp: "0812-3456-7890",
-        status: statusText,
-        isApproved: true,
-        rtId: rtId || 'rt01'
-      });
+    if (!hasCompletedKetuaTransfer) {
+      // Clean duplicate admins hanya selama RT belum pernah melakukan serah-terima.
+      const cleanedList = list.filter((u: any) => u.role !== 'admin' || u.username === adminUsername);
+      if (cleanedList.length !== list.length) {
+        list = cleanedList;
+        await saveUsers(rtId, list);
+      }
+
+      const adminId = "admin_" + adminUsername;
+      const existingAdmin = await UserModel.findOne({ $or: [{ id: adminId }, { username: adminUsername }], rtId: rtId || 'rt01' });
+      if (!existingAdmin) {
+        await UserModel.create({
+          id: adminId,
+          username: adminUsername,
+          password: hashPassword(adminPassword),
+          nama: namaKetua,
+          role: "admin",
+          alamat: "Jl. Bahagia No. 12, Kompleks Rukun",
+          noHp: "0812-3456-7890",
+          status: statusText,
+          isApproved: true,
+          rtId: rtId || 'rt01'
+        });
+      }
+    } else {
+      console.log(`[initDb] ${String(rtId || 'rt01').toUpperCase()} sudah melakukan serah-terima Ketua RT; akun Ketua RT aktif dipertahankan.`);
     }
 
     const devUsername = "developer";
@@ -1960,8 +1978,10 @@ async function handleRegister(req: express.Request, res: express.Response) {
     }
   }
 
-  const validRoles = ['warga', 'pengurus', 'sekretaris', 'bendahara', 'admin'];
-  const assignedRole = role && validRoles.includes(role) ? role : "warga";
+  // Endpoint ini adalah pendaftaran publik. Akun baru selalu dimulai sebagai Warga;
+  // role pengurus/sekretaris/bendahara/ketua RT hanya dapat diberikan melalui
+  // pengelolaan internal yang terautentikasi, bukan dari payload registrasi.
+  const assignedRole = 'warga';
 
   const newUser = await UserModel.create({
     id: Date.now().toString(),
@@ -4209,12 +4229,224 @@ app.delete("/api/warga/:id/members/:memberId", async (req, res) => {
   }
 });
 
+// Status dan proses serah-terima jabatan Ketua RT (satu kali per RT).
+app.get('/api/ketua-rt/transfer-status', enforceRoles(['admin']), async (req, res) => {
+  try {
+    const userAuth = getAuthUser(req);
+    if (userAuth?.role !== 'admin') {
+      return res.status(403).json({ error: 'Fitur ini hanya dapat diakses Ketua RT.' });
+    }
+
+    await connectDB();
+    const rtId = getAuthorizedRtId(req);
+    const tenant = await TenantModel.findOne({ rtId }).select(
+      'ketuaRoleTransferUsed ketuaRoleTransferredAt ketuaRoleTransferredFromName ketuaRoleTransferredToName'
+    ).lean();
+
+    return res.json({
+      available: tenant?.ketuaRoleTransferUsed !== true,
+      used: tenant?.ketuaRoleTransferUsed === true,
+      transferredAt: tenant?.ketuaRoleTransferredAt || null,
+      fromName: tenant?.ketuaRoleTransferredFromName || '',
+      toName: tenant?.ketuaRoleTransferredToName || ''
+    });
+  } catch (error: any) {
+    console.error('Gagal memeriksa status serah-terima Ketua RT:', error);
+    return res.status(500).json({ error: 'Gagal memeriksa status serah-terima jabatan.' });
+  }
+});
+
+app.post('/api/ketua-rt/transfer-role', enforceRoles(['admin']), async (req, res) => {
+  let dbSession: mongoose.ClientSession | null = null;
+  try {
+    const userAuth = getAuthUser(req);
+    if (userAuth?.role !== 'admin') {
+      return res.status(403).json({ error: 'Hanya Ketua RT aktif yang dapat menyerahkan jabatan.' });
+    }
+
+    await connectDB();
+    const rtId = getAuthorizedRtId(req);
+    const actorId = String(userAuth?.id || userAuth?.userId || '');
+    const targetUserId = String(req.body?.targetUserId || '').trim();
+    if (!actorId || !targetUserId) {
+      return res.status(400).json({ error: 'Pilih warga penerima jabatan Ketua RT.' });
+    }
+    if (actorId === targetUserId) {
+      return res.status(400).json({ error: 'Jabatan tidak dapat diserahkan kepada akun sendiri.' });
+    }
+
+    const actor = await UserModel.findOne({ id: actorId, rtId, role: 'admin' });
+    if (!actor) {
+      return res.status(403).json({ error: 'Akun Anda bukan lagi Ketua RT aktif.' });
+    }
+
+    const target = await UserModel.findOne({ id: targetUserId, rtId, role: 'warga', isApproved: { $ne: false } });
+    if (!target) {
+      return res.status(404).json({ error: 'Akun penerima tidak ditemukan atau bukan warga aktif yang memenuhi syarat.' });
+    }
+    const targetStatus = String(target.status || 'aktif').toLowerCase().trim();
+    if (['nonaktif', 'tidak aktif', 'tidak_aktif'].includes(targetStatus)) {
+      return res.status(400).json({ error: 'Jabatan hanya dapat diserahkan kepada warga dengan status aktif.' });
+    }
+
+    const transferredAt = new Date();
+    dbSession = await mongoose.startSession();
+    await dbSession.withTransaction(async () => {
+      // Buat dokumen tenant bila tenant lama belum memilikinya, lalu klaim flag secara atomik.
+      await TenantModel.updateOne(
+        { rtId },
+        { $setOnInsert: { rtId } },
+        { upsert: true, session: dbSession! }
+      );
+
+      const claim = await TenantModel.updateOne(
+        {
+          rtId,
+          $or: [
+            { ketuaRoleTransferUsed: { $exists: false } },
+            { ketuaRoleTransferUsed: false }
+          ]
+        },
+        {
+          $set: {
+            ketuaRoleTransferUsed: true,
+            ketuaRoleTransferredAt: transferredAt,
+            ketuaRoleTransferredFromId: actor.id,
+            ketuaRoleTransferredFromName: actor.nama,
+            ketuaRoleTransferredToId: target.id,
+            ketuaRoleTransferredToName: target.nama
+          }
+        },
+        { session: dbSession! }
+      );
+      if (claim.modifiedCount !== 1) {
+        const error: any = new Error('Serah-terima jabatan Ketua RT hanya dapat dilakukan satu kali untuk RT ini.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const oldLeaderUpdate = await UserModel.updateOne(
+        { id: actor.id, rtId, role: 'admin' },
+        { $set: { role: 'warga', activeSessionId: '' } },
+        { session: dbSession! }
+      );
+      if (oldLeaderUpdate.modifiedCount !== 1) {
+        const error: any = new Error('Role Ketua RT saat ini sudah berubah. Silakan muat ulang aplikasi.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const newLeaderUpdate = await UserModel.updateOne(
+        { id: target.id, rtId, role: 'warga', isApproved: { $ne: false } },
+        { $set: { role: 'admin', activeSessionId: '' } },
+        { session: dbSession! }
+      );
+      if (newLeaderUpdate.modifiedCount !== 1) {
+        const error: any = new Error('Akun penerima sudah berubah atau tidak lagi memenuhi syarat. Silakan coba kembali.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      // Kedua pihak harus login ulang agar token lama tidak membawa hak akses yang salah.
+      await SessionModel.updateMany(
+        { userId: { $in: [actor.id, target.id] }, rtId, isRevoked: { $ne: true } },
+        { $set: { isRevoked: true } },
+        { session: dbSession! }
+      );
+    });
+
+    if (dbSession) {
+      try { await dbSession.endSession(); } catch (endSessionError) {
+        console.warn('Sesi transaksi serah-terima gagal ditutup setelah commit:', endSessionError);
+      }
+      dbSession = null;
+    }
+
+    const actorName = String(actor.nama || actor.username || 'Ketua RT');
+    const targetName = String(target.nama || target.username || 'Warga');
+
+    // Perubahan role dan pencabutan sesi sudah committed. Bersihkan status online
+    // dan jangan batalkan respons sukses hanya karena pencatatan audit/notifikasi gagal.
+    activeSessions.delete(actor.id);
+    activeSessions.delete(target.id);
+    try {
+      await logAudit(
+        rtId,
+        actorName,
+        'TRANSFER_KETUA_RT_ROLE',
+        `Jabatan Ketua RT diserahkan satu kali dari ${actorName} kepada ${targetName}.`,
+        { userId: actor.id, role: 'admin' },
+        { userId: target.id, role: 'admin', transferredAt: transferredAt.toISOString() }
+      );
+    } catch (auditError) {
+      console.error('Serah-terima berhasil, tetapi audit log gagal disimpan:', auditError);
+    }
+    try {
+      await addNotification(
+        rtId,
+        'Serah-terima Jabatan Ketua RT',
+        `${actorName} menyerahkan jabatan Ketua RT kepada ${targetName}. Kedua akun perlu login kembali.`,
+        actorName,
+        'warga',
+        target.id
+      );
+    } catch (notificationError) {
+      console.error('Serah-terima berhasil, tetapi notifikasi gagal dibuat:', notificationError);
+    }
+
+    broadcastEvent('update', {
+      type: 'users',
+      rtId,
+      action: 'role',
+      title: 'Serah-terima Jabatan Ketua RT',
+      message: `Jabatan Ketua RT telah diserahkan kepada ${targetName}.`,
+      updaterName: actorName,
+      time: transferredAt.toISOString()
+    });
+
+    res.clearCookie('guyub_session', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/'
+    });
+    return res.json({
+      success: true,
+      message: `Jabatan Ketua RT berhasil diserahkan kepada ${targetName}. Silakan login kembali.`,
+      transferredAt: transferredAt.toISOString(),
+      previousLeader: { id: actor.id, nama: actorName, role: 'warga' },
+      newLeader: { id: target.id, nama: targetName, role: 'admin' }
+    });
+  } catch (error: any) {
+    if (dbSession) {
+      try { await dbSession.endSession(); } catch {}
+    }
+    console.error('Serah-terima jabatan Ketua RT gagal:', error);
+    const status = Number(error?.statusCode) || 500;
+    return res.status(status).json({
+      error: error?.message || 'Serah-terima jabatan Ketua RT gagal. Tidak ada perubahan yang disimpan.'
+    });
+  }
+});
+
 app.put("/api/warga/:id/role", enforceRoles(['admin']), async (req, res) => {
   const { role } = req.body;
   const rtId = getAuthorizedRtId(req);
+  const requester = getAuthUser(req);
+  const allowedRoles = ['warga', 'pengurus', 'sekretaris', 'bendahara', 'admin'];
+
+  if (!allowedRoles.includes(String(role || ''))) {
+    return res.status(400).json({ error: 'Role yang diminta tidak valid.' });
+  }
+  if (role === 'admin' && requester?.role !== 'developer') {
+    return res.status(403).json({ error: 'Role Ketua RT hanya dapat diberikan melalui fitur serah-terima satu kali.' });
+  }
 
   const user = await UserModel.findOne({ id: req.params.id, rtId });
   if (user && user.id !== "admin") {
+    if (user.role === 'admin' && requester?.role !== 'developer') {
+      return res.status(403).json({ error: 'Role Ketua RT hanya dapat diubah melalui mekanisme serah-terima.' });
+    }
     const beforeRole = user.role;
     user.role = role;
     await user.save();
