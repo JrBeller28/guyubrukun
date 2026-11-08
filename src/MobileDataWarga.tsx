@@ -222,6 +222,159 @@ const getResolvedNoKk = (w: any): string => {
   return '';
 };
 
+// Membuat file .xlsx sederhana tanpa dependensi tambahan. Seluruh isi ditulis
+// sebagai teks agar nomor KK/identitas dan angka berawalan nol tidak berubah.
+const createBkkbnXlsxBlob = (sheetName: string, headers: string[], rows: string[][]): Blob => {
+  const encoder = new TextEncoder();
+  const xmlEscape = (value: unknown): string => String(value ?? '')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+  const columnName = (index: number): string => {
+    let n = index + 1;
+    let name = '';
+    while (n > 0) {
+      const rem = (n - 1) % 26;
+      name = String.fromCharCode(65 + rem) + name;
+      n = Math.floor((n - 1) / 26);
+    }
+    return name;
+  };
+  const worksheetRows = [headers, ...rows];
+  const sheetData = worksheetRows.map((row, rowIndex) => {
+    const cells = headers.map((_, colIndex) => {
+      const ref = `${columnName(colIndex)}${rowIndex + 1}`;
+      const value = xmlEscape(row[colIndex] ?? '');
+      const style = rowIndex === 0 ? ' s="1"' : '';
+      return `<c r="${ref}"${style} t="inlineStr"><is><t xml:space="preserve">${value}</t></is></c>`;
+    }).join('');
+    return `<row r="${rowIndex + 1}">${cells}</row>`;
+  }).join('');
+  const lastCell = `${columnName(Math.max(headers.length - 1, 0))}${Math.max(worksheetRows.length, 1)}`;
+  const widths = headers.map((header, index) => {
+    const samples = rows.slice(0, 80).map(row => String(row[index] ?? '').length);
+    const width = Math.max(String(header).length + 2, ...samples, 12);
+    return `<col min="${index + 1}" max="${index + 1}" width="${Math.min(width, 38)}" customWidth="1"/>`;
+  }).join('');
+  const safeSheetName = sheetName.replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31) || 'Data';
+
+  const files: Array<{ name: string; content: string }> = [
+    {
+      name: '[Content_Types].xml',
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`
+    },
+    {
+      name: '_rels/.rels',
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`
+    },
+    {
+      name: 'xl/workbook.xml',
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${xmlEscape(safeSheetName)}" sheetId="1" r:id="rId1"/></sheets></workbook>`
+    },
+    {
+      name: 'xl/_rels/workbook.xml.rels',
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`
+    },
+    {
+      name: 'xl/styles.xml',
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0F766E"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`
+    },
+    {
+      name: 'xl/worksheets/sheet1.xml',
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="18"/><cols>${widths}</cols><sheetData>${sheetData}</sheetData><autoFilter ref="A1:${lastCell}"/></worksheet>`
+    }
+  ];
+
+  const crc32 = (bytes: Uint8Array): number => {
+    let crc = 0xFFFFFFFF;
+    for (const byte of bytes) {
+      crc ^= byte;
+      for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xEDB88320 : 0);
+    }
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  };
+  const write16 = (view: DataView, offset: number, value: number) => view.setUint16(offset, value, true);
+  const write32 = (view: DataView, offset: number, value: number) => view.setUint32(offset, value >>> 0, true);
+  const localParts: Uint8Array[] = [];
+  const centralParts: Uint8Array[] = [];
+  let localOffset = 0;
+
+  files.forEach(file => {
+    const nameBytes = encoder.encode(file.name);
+    const dataBytes = encoder.encode(file.content);
+    const checksum = crc32(dataBytes);
+    const localHeader = new Uint8Array(30 + nameBytes.length);
+    const localView = new DataView(localHeader.buffer);
+    write32(localView, 0, 0x04034B50);
+    write16(localView, 4, 20);
+    write16(localView, 6, 0);
+    write16(localView, 8, 0);
+    write16(localView, 10, 0);
+    write16(localView, 12, 33);
+    write32(localView, 14, checksum);
+    write32(localView, 18, dataBytes.length);
+    write32(localView, 22, dataBytes.length);
+    write16(localView, 26, nameBytes.length);
+    write16(localView, 28, 0);
+    localHeader.set(nameBytes, 30);
+    localParts.push(localHeader, dataBytes);
+
+    const centralHeader = new Uint8Array(46 + nameBytes.length);
+    const centralView = new DataView(centralHeader.buffer);
+    write32(centralView, 0, 0x02014B50);
+    write16(centralView, 4, 20);
+    write16(centralView, 6, 20);
+    write16(centralView, 8, 0);
+    write16(centralView, 10, 0);
+    write16(centralView, 12, 0);
+    write16(centralView, 14, 33);
+    write32(centralView, 16, checksum);
+    write32(centralView, 20, dataBytes.length);
+    write32(centralView, 24, dataBytes.length);
+    write16(centralView, 28, nameBytes.length);
+    write16(centralView, 30, 0);
+    write16(centralView, 32, 0);
+    write16(centralView, 34, 0);
+    write16(centralView, 36, 0);
+    write32(centralView, 38, 0);
+    write32(centralView, 42, localOffset);
+    centralHeader.set(nameBytes, 46);
+    centralParts.push(centralHeader);
+    localOffset += localHeader.length + dataBytes.length;
+  });
+
+  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+  const endRecord = new Uint8Array(22);
+  const endView = new DataView(endRecord.buffer);
+  write32(endView, 0, 0x06054B50);
+  write16(endView, 4, 0);
+  write16(endView, 6, 0);
+  write16(endView, 8, files.length);
+  write16(endView, 10, files.length);
+  write32(endView, 12, centralSize);
+  write32(endView, 16, localOffset);
+  write16(endView, 20, 0);
+
+  const zipParts = [...localParts, ...centralParts, endRecord];
+  const zipSize = zipParts.reduce((sum, part) => sum + part.length, 0);
+  const zipBytes = new Uint8Array(zipSize);
+  let cursor = 0;
+  zipParts.forEach(part => { zipBytes.set(part, cursor); cursor += part.length; });
+  return new Blob([zipBytes.buffer as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+};
+
+const downloadBkkbnXlsx = (filename: string, sheetName: string, headers: string[], rows: string[][]) => {
+  const blob = createBkkbnXlsxBlob(sheetName, headers, rows);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
 let cachedDataWarga: any[] | null = null;
 let cachedAllWargaFull: any[] | null = null;
 
@@ -273,6 +426,9 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedBkkbnCategory, setSelectedBkkbnCategory] = useState<'wus' | 'pus' | null>(null);
+  const [bkkbnSearchQuery, setBkkbnSearchQuery] = useState('');
+  const [bkkbnAgeRange, setBkkbnAgeRange] = useState<'semua' | '15-19' | '20-29' | '30-39' | '40-49'>('semua');
+  const [bkkbnBlockFilter, setBkkbnBlockFilter] = useState('');
   const [transferStatus, setTransferStatus] = useState<{ checked: boolean; used: boolean; transferredAt?: string | null; fromName?: string; toName?: string }>({ checked: false, used: false });
   const [showKetuaTransferModal, setShowKetuaTransferModal] = useState(false);
   const [transferTargetId, setTransferTargetId] = useState('');
@@ -1506,7 +1662,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
       households.set(person.wargaId, current);
     });
 
-    const result: Array<{ id: string; wife: string; wifeAge: number; husband: string; family: string; address: string }> = [];
+    const result: Array<{ id: string; wife: string; wifeAge: number; husband: string; family: string; address: string; blokShort: string; noKk: string }> = [];
     households.forEach((members, wargaId) => {
       const head = members.find(person => person.isHead);
       const explicitWives = members.filter(person => /istri/i.test(String(person.hubungan || '')));
@@ -1540,12 +1696,78 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
           wifeAge: wife.umur,
           husband: husband.nama,
           family: head?.nama || wife.kepalaKeluarga,
-          address: wife.blokFormatted
+          address: wife.wargaObj?.alamat || wife.blokFormatted,
+          blokShort: wife.blokShort || '-',
+          noKk: getResolvedNoKk(wife.wargaObj)
         });
       });
     });
     return result;
   }, [allPersonsList]);
+
+  const bkkbnBlokOptions = useMemo(() => Array.from(new Set([
+    ...bkkbnWusPersons.map(person => person.blokShort || '-'),
+    ...bkkbnPusFamilies.map(family => family.blokShort || '-')
+  ])).sort((a, b) => a.localeCompare(b, 'id')), [bkkbnWusPersons, bkkbnPusFamilies]);
+
+  const filteredBkkbnWusPersons = useMemo(() => {
+    const query = bkkbnSearchQuery.trim().toLocaleLowerCase('id-ID');
+    return bkkbnWusPersons.filter(person => {
+      const matchesSearch = !query || [person.nama, person.kepalaKeluarga, person.blokFormatted, person.wargaObj?.alamat]
+        .some(value => String(value || '').toLocaleLowerCase('id-ID').includes(query));
+      const matchesBlock = !bkkbnBlockFilter || (person.blokShort || '-') === bkkbnBlockFilter;
+      const matchesAge = bkkbnAgeRange === 'semua' || (() => {
+        const [min, max] = bkkbnAgeRange.split('-').map(Number);
+        return person.umur >= min && person.umur <= max;
+      })();
+      return matchesSearch && matchesBlock && matchesAge;
+    });
+  }, [bkkbnWusPersons, bkkbnSearchQuery, bkkbnBlockFilter, bkkbnAgeRange]);
+
+  const filteredBkkbnPusFamilies = useMemo(() => {
+    const query = bkkbnSearchQuery.trim().toLocaleLowerCase('id-ID');
+    return bkkbnPusFamilies.filter(family => {
+      const matchesSearch = !query || [family.wife, family.husband, family.family, family.address]
+        .some(value => String(value || '').toLocaleLowerCase('id-ID').includes(query));
+      const matchesBlock = !bkkbnBlockFilter || (family.blokShort || '-') === bkkbnBlockFilter;
+      const matchesAge = bkkbnAgeRange === 'semua' || (() => {
+        const [min, max] = bkkbnAgeRange.split('-').map(Number);
+        return family.wifeAge >= min && family.wifeAge <= max;
+      })();
+      return matchesSearch && matchesBlock && matchesAge;
+    });
+  }, [bkkbnPusFamilies, bkkbnSearchQuery, bkkbnBlockFilter, bkkbnAgeRange]);
+
+  const resetBkkbnFilters = () => {
+    setBkkbnSearchQuery('');
+    setBkkbnAgeRange('semua');
+    setBkkbnBlockFilter('');
+  };
+
+  const exportBkkbnDataToExcel = () => {
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    if (selectedBkkbnCategory === 'wus') {
+      const headers = ['No', 'Nama WUS', 'Umur (Tahun)', 'Tanggal Lahir', 'Hubungan dalam KK', 'Jenis Kelamin', 'Kepala Keluarga', 'Nomor KK', 'Blok', 'Alamat Lengkap'];
+      const rows = filteredBkkbnWusPersons.map((person, index) => [
+        String(index + 1), person.nama, String(person.umur), person.tglLahirFormatted || '-',
+        person.hubungan || '-', person.jenisKelamin || 'Perempuan', person.kepalaKeluarga || '-', getResolvedNoKk(person.wargaObj) || '-',
+        person.blokShort || '-', person.wargaObj?.alamat || person.blokFormatted || '-'
+      ]);
+      downloadBkkbnXlsx(`Data_WUS_RT_${dateStamp}.xlsx`, 'Data WUS', headers, rows);
+      showStatusBanner(`Export Excel WUS berhasil: ${rows.length} data sesuai filter.`);
+      return;
+    }
+
+    if (selectedBkkbnCategory === 'pus') {
+      const headers = ['No', 'Nama Istri', 'Umur Istri (Tahun)', 'Nama Suami', 'Kepala Keluarga', 'Nomor KK', 'Blok', 'Alamat'];
+      const rows = filteredBkkbnPusFamilies.map((family, index) => [
+        String(index + 1), family.wife, String(family.wifeAge), family.husband,
+        family.family || '-', family.noKk || '-', family.blokShort || '-', family.address || '-'
+      ]);
+      downloadBkkbnXlsx(`Data_PUS_RT_${dateStamp}.xlsx`, 'Data PUS', headers, rows);
+      showStatusBanner(`Export Excel PUS berhasil: ${rows.length} pasangan sesuai filter.`);
+    }
+  };
 
   const eligibleKetuaTransferTargets = useMemo(() => {
     const source = allWargaFullData.length > 0 ? allWargaFullData : wargaData;
@@ -2446,32 +2668,72 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                       <div className="flex items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-4 py-3">
                         <div>
                           <p className="text-sm font-black text-slate-900">{selectedBkkbnCategory === 'wus' ? 'Daftar Wanita Usia Subur' : 'Daftar Pasangan Usia Subur'}</p>
-                          <p className="text-[10px] text-slate-500">{selectedBkkbnCategory === 'wus' ? `${bkkbnWusPersons.length} perempuan berusia 15–49 tahun` : `${bkkbnPusFamilies.length} pasangan teridentifikasi dari data hubungan keluarga`}</p>
+                          <p className="text-[10px] text-slate-500">{selectedBkkbnCategory === 'wus' ? `${filteredBkkbnWusPersons.length} dari ${bkkbnWusPersons.length} perempuan berusia 15–49 tahun` : `${filteredBkkbnPusFamilies.length} dari ${bkkbnPusFamilies.length} pasangan teridentifikasi`}</p>
                         </div>
                         <button type="button" onClick={() => setSelectedBkkbnCategory(null)} className="rounded-lg bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">Tutup ✕</button>
                       </div>
+                      <div className="space-y-3 border-b border-slate-100 bg-white p-3">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                          <label className="relative block sm:col-span-1">
+                            <span className="sr-only">Cari nama atau alamat</span>
+                            <input
+                              type="search"
+                              value={bkkbnSearchQuery}
+                              onChange={event => setBkkbnSearchQuery(event.target.value)}
+                              placeholder={selectedBkkbnCategory === 'wus' ? 'Cari nama / kepala keluarga…' : 'Cari nama istri / suami…'}
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+                            />
+                          </label>
+                          <label className="block">
+                            <span className="sr-only">Filter kelompok umur</span>
+                            <select value={bkkbnAgeRange} onChange={event => setBkkbnAgeRange(event.target.value as typeof bkkbnAgeRange)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100">
+                              <option value="semua">Semua umur (15–49)</option>
+                              <option value="15-19">Umur 15–19 tahun</option>
+                              <option value="20-29">Umur 20–29 tahun</option>
+                              <option value="30-39">Umur 30–39 tahun</option>
+                              <option value="40-49">Umur 40–49 tahun</option>
+                            </select>
+                          </label>
+                          <label className="block">
+                            <span className="sr-only">Filter blok</span>
+                            <select value={bkkbnBlockFilter} onChange={event => setBkkbnBlockFilter(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100">
+                              <option value="">Semua blok</option>
+                              {bkkbnBlokOptions.map(block => <option key={block} value={block}>{block === '-' ? 'Blok belum diisi' : `Blok ${block}`}</option>)}
+                            </select>
+                          </label>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-[10px] font-semibold text-slate-500">Menampilkan {selectedBkkbnCategory === 'wus' ? filteredBkkbnWusPersons.length : filteredBkkbnPusFamilies.length} data setelah filter</p>
+                          <div className="flex items-center gap-2">
+                            <button type="button" onClick={resetBkkbnFilters} disabled={!bkkbnSearchQuery && bkkbnAgeRange === 'semua' && !bkkbnBlockFilter} className="rounded-lg px-3 py-2 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">Reset Filter</button>
+                            <button type="button" onClick={exportBkkbnDataToExcel} disabled={(selectedBkkbnCategory === 'wus' ? filteredBkkbnWusPersons.length : filteredBkkbnPusFamilies.length) === 0} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-2 text-[10px] font-extrabold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40">
+                              <icons.document className="h-3.5 w-3.5" /> Export Excel (.xlsx)
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                       {selectedBkkbnCategory === 'wus' ? (
-                        bkkbnWusPersons.length > 0 ? (
+                        filteredBkkbnWusPersons.length > 0 ? (
                           <div className="max-h-80 divide-y divide-slate-100 overflow-y-auto">
-                            {bkkbnWusPersons.map(person => (
+                            {filteredBkkbnWusPersons.map(person => (
                               <div key={person.id} className="flex items-center justify-between gap-3 px-4 py-3">
                                 <div className="min-w-0"><p className="truncate text-xs font-extrabold text-slate-800">{person.nama}</p><p className="mt-0.5 truncate text-[10px] text-slate-500">{person.blokFormatted} • KK: {person.kepalaKeluarga}</p></div>
                                 <span className="shrink-0 rounded-full bg-fuchsia-50 px-2.5 py-1 text-[10px] font-black text-fuchsia-800">{person.umur} tahun</span>
                               </div>
                             ))}
                           </div>
-                        ) : <p className="px-4 py-6 text-center text-xs text-slate-500">Belum ada data WUS yang memenuhi kriteria atau data umur/jenis kelamin belum lengkap.</p>
+                        ) : <p className="px-4 py-6 text-center text-xs text-slate-500">Tidak ada data WUS yang cocok dengan filter. Coba ubah pencarian, kelompok umur, atau blok.</p>
                       ) : (
-                        bkkbnPusFamilies.length > 0 ? (
+                        filteredBkkbnPusFamilies.length > 0 ? (
                           <div className="max-h-80 divide-y divide-slate-100 overflow-y-auto">
-                            {bkkbnPusFamilies.map(pair => (
+                            {filteredBkkbnPusFamilies.map(pair => (
                               <div key={pair.id} className="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-2">
                                 <div><p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Istri • {pair.wifeAge} tahun</p><p className="text-xs font-extrabold text-slate-800">{pair.wife}</p></div>
                                 <div><p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Suami</p><p className="text-xs font-extrabold text-slate-800">{pair.husband}</p><p className="mt-0.5 text-[10px] text-slate-500">{pair.address} • KK: {pair.family}</p></div>
                               </div>
                             ))}
                           </div>
-                        ) : <p className="px-4 py-6 text-center text-xs text-slate-500">Belum ada pasangan yang dapat diidentifikasi. Pastikan hubungan keluarga pada KK tercatat sebagai Istri/Suami dan umur istri tersedia.</p>
+                        ) : <p className="px-4 py-6 text-center text-xs text-slate-500">Tidak ada pasangan PUS yang cocok dengan filter. Coba ubah pencarian, kelompok umur, atau blok.</p>
                       )}
                     </div>
                   </motion.div>
