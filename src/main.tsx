@@ -62,12 +62,11 @@ createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <DashboardProvider>
         <Suspense fallback={
-          <div className="gr-startup-fallback min-h-screen w-full flex flex-col items-center justify-center" role="status" aria-label="Memuat Guyub Rukun">
-            <div className="gr-startup-fallback-logo">
-              <img src="/splash-logo.png" alt="Logo Guyub Rukun" fetchPriority="high" />
+          <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 text-teal-600">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-8 h-8 border-3 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-xs font-semibold text-slate-500">Memuat Guyub Rukun...</p>
             </div>
-            <p className="mt-4 text-xs font-semibold text-teal-800">Memuat Guyub Rukun...</p>
-            <div className="gr-startup-fallback-track mt-4" aria-hidden="true"><span /></div>
           </div>
         }>
           <App />
@@ -76,5 +75,3 @@ createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </StrictMode>,
 );
-
-
