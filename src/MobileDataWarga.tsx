@@ -231,6 +231,8 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
   const isSekretaris = currentUser?.role === 'sekretaris';
   const isPrivilegedKkViewer = isKetuaRT || isSekretaris;
   const isAdmin = isKetuaRT;
+  const canViewBkkbnData = !isDeveloper && (isKetuaRT || isSekretaris);
+  const canManageKetuaRtTransfer = currentUser?.role === 'admin' && !isDeveloper;
 
   // Khusus role warga, pengurus, dan bendahara jangan munculkan demografi usia
   const userRole = String(currentUser?.role || '').toLowerCase();
@@ -270,6 +272,11 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
   };
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedBkkbnCategory, setSelectedBkkbnCategory] = useState<'wus' | 'pus' | null>(null);
+  const [transferStatus, setTransferStatus] = useState<{ checked: boolean; used: boolean; transferredAt?: string | null; fromName?: string; toName?: string }>({ checked: false, used: false });
+  const [showKetuaTransferModal, setShowKetuaTransferModal] = useState(false);
+  const [transferTargetId, setTransferTargetId] = useState('');
+  const [isTransferringKetuaRole, setIsTransferringKetuaRole] = useState(false);
 
   // Pagination states
   const [page, setPage] = useState(1);
@@ -396,6 +403,46 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
     }
   };
 
+  const handleKetuaRoleTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!transferTargetId || isTransferringKetuaRole || transferStatus.used) return;
+
+    const selectedTarget = (allWargaFullData.length > 0 ? allWargaFullData : wargaData)
+      .find((w: any) => String(w.id) === String(transferTargetId));
+    if (!selectedTarget) {
+      showStatusBanner('Warga penerima tidak ditemukan. Muat ulang data warga dan coba kembali.', true);
+      return;
+    }
+
+    setIsTransferringKetuaRole(true);
+    try {
+      const res = await apiFetch('/api/ketua-rt/transfer-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: transferTargetId })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Serah-terima jabatan Ketua RT gagal.');
+      }
+
+      setTransferStatus({ checked: true, used: true, transferredAt: data.transferredAt, fromName: currentUser?.nama || '', toName: selectedTarget.nama || '' });
+      setShowKetuaTransferModal(false);
+      showStatusBanner(data.message || 'Jabatan Ketua RT berhasil diserahkan.', false, 'Serah-terima Jabatan Berhasil');
+
+      // Server telah mencabut sesi lama dan menghapus cookie. Arahkan akun lama ke halaman login.
+      window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('auth_session_invalidated', {
+          detail: { message: 'Jabatan Ketua RT telah diserahkan. Silakan login kembali menggunakan akun Anda.', preserveStoredSession: false }
+        }));
+      }, 900);
+    } catch (error: any) {
+      showStatusBanner(error?.message || 'Gagal menyerahkan jabatan Ketua RT.', true);
+    } finally {
+      setIsTransferringKetuaRole(false);
+    }
+  };
+
   const calculateAge = (dob: string) => {
     if (!dob) return '';
     const diff_ms = Date.now() - new Date(dob).getTime();
@@ -483,7 +530,23 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
     if (isPrivilegedKkViewer) {
       fetchAllKkWargaForKetuaRT();
     }
-  }, [isPrivilegedKkViewer, canViewDemografiUsia]);
+    if (canManageKetuaRtTransfer) {
+      apiFetch('/api/ketua-rt/transfer-status')
+        .then(async res => {
+          const data = await res.json();
+          if (res.ok) {
+            setTransferStatus({
+              checked: true,
+              used: data.used === true,
+              transferredAt: data.transferredAt || null,
+              fromName: data.fromName || '',
+              toName: data.toName || ''
+            });
+          }
+        })
+        .catch(error => console.error('Gagal memeriksa status serah-terima Ketua RT:', error));
+    }
+  }, [isPrivilegedKkViewer, canViewDemografiUsia, canManageKetuaRtTransfer]);
 
   useEffect(() => {
     setPage(1);
@@ -1419,6 +1482,82 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
     return persons;
   }, [wargaData, allWargaFullData, allWargaKkData, isKetuaRT]);
 
+  const bkkbnWusPersons = useMemo(() => allPersonsList.filter(person => {
+    if (person.umur < 15 || person.umur > 49) return false;
+
+    // Untuk rekap BKKBN, jangan menebak jenis kelamin dari nama. Gunakan data
+    // jenis kelamin yang diisi atau hubungan keluarga perempuan yang eksplisit.
+    const sourcePerson = person.memberObj || person.wargaObj || {};
+    const rawGender = String(sourcePerson.jenisKelamin || '').trim().toLowerCase();
+    if (['perempuan', 'p', 'wanita'].includes(rawGender)) return true;
+    if (['laki-laki', 'l', 'pria', 'lelaki'].includes(rawGender)) return false;
+
+    const relationship = String(person.hubungan || '').trim().toLowerCase();
+    return /^(istri|ibu|anak perempuan|saudara perempuan|nenek|menantu perempuan|cucu perempuan)$/.test(relationship);
+  }), [allPersonsList]);
+
+  // PUS hanya dihitung jika usia istri 15-49 tahun DAN hubungan suami/istri tercatat pada KK.
+  // Umur saja tidak cukup untuk menyimpulkan seseorang sudah menikah.
+  const bkkbnPusFamilies = useMemo(() => {
+    const households = new Map<string, typeof allPersonsList>();
+    allPersonsList.forEach(person => {
+      const current = households.get(person.wargaId) || [];
+      current.push(person);
+      households.set(person.wargaId, current);
+    });
+
+    const result: Array<{ id: string; wife: string; wifeAge: number; husband: string; family: string; address: string }> = [];
+    households.forEach((members, wargaId) => {
+      const head = members.find(person => person.isHead);
+      const explicitWives = members.filter(person => /istri/i.test(String(person.hubungan || '')));
+      // Label hubungan Suami/Istri di KK dipakai sebagai bukti hubungan; jangan
+      // mengandalkan tebakan jenis kelamin dari nama untuk memasangkan PUS.
+      const explicitHusbands = members.filter(person => /suami/i.test(String(person.hubungan || '')));
+      const eligibleWives: Array<{ wife: typeof allPersonsList[number]; husband: typeof allPersonsList[number] }> = [];
+      const headRawGender = String(head?.wargaObj?.jenisKelamin || '').trim().toLowerCase();
+      const headExplicitlyFemale = ['perempuan', 'p', 'wanita'].includes(headRawGender);
+
+      explicitWives.forEach(wife => {
+        const wifeRawGender = String((wife.memberObj || wife.wargaObj || {}).jenisKelamin || '').trim().toLowerCase();
+        if (['laki-laki', 'l', 'pria', 'lelaki'].includes(wifeRawGender) || wife.umur < 15 || wife.umur > 49) return;
+        const husband = explicitHusbands.find(person => person.id !== wife.id)
+          || (head && head.id !== wife.id && !headExplicitlyFemale ? head : undefined);
+        if (husband) eligibleWives.push({ wife, husband });
+      });
+
+      // Mendukung susunan KK dengan perempuan sebagai kepala keluarga dan suami dicatat sebagai anggota.
+      if (head && ['perempuan', 'p', 'wanita'].includes(headRawGender) && head.umur >= 15 && head.umur <= 49) {
+        const husband = explicitHusbands.find(person => person.id !== head.id);
+        if (husband && !eligibleWives.some(pair => pair.wife.id === head.id)) {
+          eligibleWives.push({ wife: head, husband });
+        }
+      }
+
+      eligibleWives.forEach(({ wife, husband }) => {
+        result.push({
+          id: `${wargaId}_${wife.id}`,
+          wife: wife.nama,
+          wifeAge: wife.umur,
+          husband: husband.nama,
+          family: head?.nama || wife.kepalaKeluarga,
+          address: wife.blokFormatted
+        });
+      });
+    });
+    return result;
+  }, [allPersonsList]);
+
+  const eligibleKetuaTransferTargets = useMemo(() => {
+    const source = allWargaFullData.length > 0 ? allWargaFullData : wargaData;
+    return source.filter((w: any) => {
+      const status = String(w.status || 'aktif').toLowerCase().trim();
+      return String(w.id) !== String(currentUser?.id || '') &&
+        w.role === 'warga' &&
+        w.isApproved !== false &&
+        !['nonaktif', 'tidak aktif', 'tidak_aktif'].includes(status);
+    });
+  }, [allWargaFullData, wargaData, currentUser?.id]);
+
   const allAges = useMemo(() => allPersonsList.map(p => p.umur), [allPersonsList]);
 
   const filteredSelectedAgePersons = useMemo(() => {
@@ -2256,6 +2395,110 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
         <>
           <h2 className="mobile-data-warga-title text-xl sm:text-2xl font-extrabold text-slate-900 mb-4 tracking-tight">Direktori Warga & Pengurus</h2>
 
+          {/* DATA WUS & PUS BKKBN KHUSUS KETUA RT DAN SEKRETARIS */}
+          {canViewBkkbnData && (
+            <section className="mb-6 rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4 sm:p-5 shadow-sm">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wider text-emerald-900">Pendataan Keluarga Berencana</p>
+                  <h3 className="mt-1 text-lg font-black text-slate-900">Kategori WUS & PUS — BKKBN</h3>
+                  <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-slate-600">Rekap warga aktif berdasarkan umur dan hubungan keluarga yang tercatat pada data RT. Ketuk kategori untuk membuka daftar nama.</p>
+                </div>
+                <span className="rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[10px] font-extrabold text-emerald-800">Khusus Ketua RT & Sekretaris</span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button type="button" onClick={() => setSelectedBkkbnCategory(current => current === 'wus' ? null : 'wus')} className={`rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${selectedBkkbnCategory === 'wus' ? 'border-fuchsia-400 bg-fuchsia-50 ring-2 ring-fuchsia-200' : 'border-fuchsia-100 bg-white'}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-wider text-fuchsia-700">WUS</p>
+                      <p className="mt-0.5 text-sm font-extrabold text-slate-900">Wanita Usia Subur</p>
+                      <p className="mt-1 text-[10px] font-medium text-slate-500">Perempuan usia 15–49 tahun</p>
+                    </div>
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-fuchsia-100 text-xl">♀</div>
+                  </div>
+                  <div className="mt-3 flex items-end justify-between">
+                    <span className="text-3xl font-black tabular-nums text-fuchsia-800">{bkkbnWusPersons.length}</span>
+                    <span className="text-[10px] font-extrabold text-fuchsia-700">{selectedBkkbnCategory === 'wus' ? 'Tutup daftar ↑' : 'Lihat daftar →'}</span>
+                  </div>
+                </button>
+
+                <button type="button" onClick={() => setSelectedBkkbnCategory(current => current === 'pus' ? null : 'pus')} className={`rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${selectedBkkbnCategory === 'pus' ? 'border-teal-400 bg-teal-50 ring-2 ring-teal-200' : 'border-teal-100 bg-white'}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-wider text-teal-700">PUS</p>
+                      <p className="mt-0.5 text-sm font-extrabold text-slate-900">Pasangan Usia Subur</p>
+                      <p className="mt-1 text-[10px] font-medium text-slate-500">Pasangan dengan istri usia 15–49 tahun</p>
+                    </div>
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-100 text-xl">♡</div>
+                  </div>
+                  <div className="mt-3 flex items-end justify-between">
+                    <span className="text-3xl font-black tabular-nums text-teal-800">{bkkbnPusFamilies.length}</span>
+                    <span className="text-[10px] font-extrabold text-teal-700">{selectedBkkbnCategory === 'pus' ? 'Tutup daftar ↑' : 'Lihat daftar →'}</span>
+                  </div>
+                </button>
+              </div>
+
+              <AnimatePresence>
+                {selectedBkkbnCategory && (
+                  <motion.div initial={{ opacity: 0, y: 8, height: 0 }} animate={{ opacity: 1, y: 0, height: 'auto' }} exit={{ opacity: 0, y: 8, height: 0 }} className="mt-4 overflow-hidden">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                      <div className="flex items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-4 py-3">
+                        <div>
+                          <p className="text-sm font-black text-slate-900">{selectedBkkbnCategory === 'wus' ? 'Daftar Wanita Usia Subur' : 'Daftar Pasangan Usia Subur'}</p>
+                          <p className="text-[10px] text-slate-500">{selectedBkkbnCategory === 'wus' ? `${bkkbnWusPersons.length} perempuan berusia 15–49 tahun` : `${bkkbnPusFamilies.length} pasangan teridentifikasi dari data hubungan keluarga`}</p>
+                        </div>
+                        <button type="button" onClick={() => setSelectedBkkbnCategory(null)} className="rounded-lg bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">Tutup ✕</button>
+                      </div>
+                      {selectedBkkbnCategory === 'wus' ? (
+                        bkkbnWusPersons.length > 0 ? (
+                          <div className="max-h-80 divide-y divide-slate-100 overflow-y-auto">
+                            {bkkbnWusPersons.map(person => (
+                              <div key={person.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                                <div className="min-w-0"><p className="truncate text-xs font-extrabold text-slate-800">{person.nama}</p><p className="mt-0.5 truncate text-[10px] text-slate-500">{person.blokFormatted} • KK: {person.kepalaKeluarga}</p></div>
+                                <span className="shrink-0 rounded-full bg-fuchsia-50 px-2.5 py-1 text-[10px] font-black text-fuchsia-800">{person.umur} tahun</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : <p className="px-4 py-6 text-center text-xs text-slate-500">Belum ada data WUS yang memenuhi kriteria atau data umur/jenis kelamin belum lengkap.</p>
+                      ) : (
+                        bkkbnPusFamilies.length > 0 ? (
+                          <div className="max-h-80 divide-y divide-slate-100 overflow-y-auto">
+                            {bkkbnPusFamilies.map(pair => (
+                              <div key={pair.id} className="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-2">
+                                <div><p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Istri • {pair.wifeAge} tahun</p><p className="text-xs font-extrabold text-slate-800">{pair.wife}</p></div>
+                                <div><p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Suami</p><p className="text-xs font-extrabold text-slate-800">{pair.husband}</p><p className="mt-0.5 text-[10px] text-slate-500">{pair.address} • KK: {pair.family}</p></div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : <p className="px-4 py-6 text-center text-xs text-slate-500">Belum ada pasangan yang dapat diidentifikasi. Pastikan hubungan keluarga pada KK tercatat sebagai Istri/Suami dan umur istri tersedia.</p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <p className="mt-3 text-[9px] leading-relaxed text-slate-500">Catatan: WUS dihitung dari jenis kelamin perempuan yang terdata (atau hubungan keluarga perempuan yang eksplisit) dan usia 15–49 tahun; jenis kelamin tidak ditebak dari nama. PUS dihitung bila hubungan suami/istri terdeteksi pada data KK dan umur istri 15–49 tahun. Pengecualian operasional BKKBN (istri di bawah 15 tahun yang sudah menikah atau di atas 49 tahun yang masih menstruasi) belum dihitung karena informasinya tidak tersedia pada data RT. Lengkapi jenis kelamin, tanggal lahir, dan hubungan keluarga agar rekap lebih akurat.</p>
+            </section>
+          )}
+
+          {/* PANEL SERAH-TERIMA ROLE KETUA RT - HANYA SATU KALI PER RT */}
+          {canManageKetuaRtTransfer && (
+            <section className="mb-6 rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-4 sm:p-5 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-amber-800">Pengelolaan Jabatan RT</p>
+                  <h3 className="mt-1 text-base font-black text-slate-900">Serah-terima Role Ketua RT</h3>
+                  <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-slate-600">Ketua RT dapat menyerahkan jabatan kepada satu akun warga aktif. Proses ini hanya tersedia satu kali untuk RT ini dan tidak dapat dibatalkan dari aplikasi.</p>
+                  {transferStatus.used && <p className="mt-2 text-[10px] font-extrabold text-rose-700">Sudah digunakan{transferStatus.toName ? ` • Penerima: ${transferStatus.toName}` : ''}</p>}
+                </div>
+                <button type="button" disabled={!transferStatus.checked || transferStatus.used || eligibleKetuaTransferTargets.length === 0} onClick={() => { setTransferTargetId(''); setShowKetuaTransferModal(true); }} className="shrink-0 rounded-xl bg-amber-600 px-4 py-3 text-xs font-extrabold text-white shadow-sm transition-all hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-45">
+                  {transferStatus.used ? 'Jatah Transfer Habis' : !transferStatus.checked ? 'Memeriksa Status…' : eligibleKetuaTransferTargets.length === 0 ? 'Belum Ada Calon Warga' : 'Serahkan Jabatan'}
+                </button>
+              </div>
+              {transferStatus.used && transferStatus.transferredAt && <p className="mt-2 text-[9px] text-slate-500">Waktu serah-terima: {new Date(transferStatus.transferredAt).toLocaleString('id-ID')}</p>}
+            </section>
+          )}
+
           {/* STATS CARDS & BAR CHART (KHUSUS ROLE SELAIN WARGA, PENGURUS, DAN BENDAHARA) */}
           {canViewDemografiUsia && (
             <>
@@ -2634,7 +2877,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                                 <td className="py-3 px-3">
                                   <div className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5 hover:text-teal-700">
                                     <span>{person.nama}</span>
-                                    <span className="text-[10px] text-teal-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">👁️ Lihat Data</span>
+                                    <span className="text-[10px] text-teal-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">👁️ Foto</span>
                                   </div>
                                   <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                                     <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 whitespace-nowrap">
@@ -3060,10 +3303,10 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                               setPreviewPhotoWarga(warga);
                             }}
                             className="px-2.5 py-1 text-[11px] font-extrabold bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-xl transition-colors cursor-pointer flex items-center gap-1"
-                            title="Lihat detail data warga"
+                            title="Pratinjau profil & identitas warga"
                           >
-                            <icons.eye className="w-3.5 h-3.5" />
-                            <span>Lihat</span>
+                            <span>📷</span>
+                            <span className="hidden sm:inline">Profil</span>
                           </button>
 
                           {canViewFamily && (
@@ -3625,241 +3868,125 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
             )}
           </AnimatePresence>
 
-      {/* MODAL DETAIL DATA WARGA */}
+      {/* MODAL PRATINJAU FOTO PROFIL WARGA (PHOTO ONLY PREVIEW) */}
       <AnimatePresence>
-        {previewPhotoWarga && (() => {
-          const previewOwnAccount = isOwnAccount(previewPhotoWarga);
-          const canPreviewPrivateData = isKetuaRT || previewOwnAccount;
-          const canPreviewKk = isPrivilegedKkViewer || previewOwnAccount;
-          const canPreviewFamily = isKetuaRT || previewOwnAccount;
-          const canPreviewDocuments = isKetuaRT || previewOwnAccount;
-          const previewNoKk = getResolvedNoKk(previewPhotoWarga);
-          const previewAge = resolvePersonAge(previewPhotoWarga.umur, previewPhotoWarga.tglLahir);
-          const previewMembers = Array.isArray(previewPhotoWarga.members) ? previewPhotoWarga.members : [];
-          const previewKtpFiles = Array.isArray(previewPhotoWarga.dokumenKtp)
-            ? previewPhotoWarga.dokumenKtp
-            : previewPhotoWarga.dokumenKtp ? [previewPhotoWarga.dokumenKtp] : [];
-          const previewDocumentList = [
-            ...(previewPhotoWarga.dokumenKk ? [{ url: previewPhotoWarga.dokumenKk, title: 'Kartu Keluarga' }] : []),
-            ...previewKtpFiles.map((url: string, index: number) => ({ url, title: `KTP ${index + 1}` }))
-          ];
-          const previewRoleLabel = previewPhotoWarga.role === 'admin'
-            ? 'Ketua RT / Admin'
-            : previewPhotoWarga.role === 'pengurus'
-              ? 'Pengurus RT'
-              : previewPhotoWarga.role === 'bendahara'
-                ? 'Bendahara'
-                : previewPhotoWarga.role === 'sekretaris'
-                  ? 'Sekretaris'
-                  : 'Warga';
-          const previewApprovalLabel = previewPhotoWarga.isApproved === false
-            ? 'Belum disetujui / Nonaktif'
-            : previewPhotoWarga.status || 'Warga Tetap';
-
-          return (
+        {previewPhotoWarga && (
+          <div 
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md"
+            onClick={() => setPreviewPhotoWarga(null)}
+          >
             <motion.div
-              key="warga-detail-modal"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-slate-950/75 backdrop-blur-sm p-0 sm:p-4"
-              onClick={() => setPreviewPhotoWarga(null)}
+              initial={{ opacity: 0, scale: 0.9, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 15 }}
+              transition={{ type: "spring", stiffness: 320, damping: 25 }}
+              className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full overflow-hidden border border-slate-100 relative p-5"
+              onClick={e => e.stopPropagation()}
             >
-              <motion.div
-                initial={{ opacity: 0, y: 24, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 24, scale: 0.98 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-                className="bg-white rounded-t-[1.75rem] sm:rounded-[1.75rem] shadow-2xl w-full max-w-xl max-h-[92dvh] sm:max-h-[88vh] overflow-hidden flex flex-col border border-slate-100"
-                onClick={e => e.stopPropagation()}
-              >
-                <div className="shrink-0 px-4 sm:px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 bg-white">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center font-black text-lg shrink-0 border border-teal-100">
-                      {previewPhotoWarga.photo ? (
-                        <img src={previewPhotoWarga.photo} alt={previewPhotoWarga.nama || 'Foto warga'} className="w-full h-full object-cover" />
-                      ) : (previewPhotoWarga.nama || 'W').charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-extrabold text-slate-900 text-base sm:text-lg truncate">{previewPhotoWarga.nama || 'Detail Warga'}</h3>
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">{previewRoleLabel}</span>
-                        {previewOwnAccount && <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Akun Anda</span>}
-                      </div>
-                    </div>
+              {/* Header Modal */}
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+                <div className="min-w-0 pr-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-slate-800 text-base truncate">
+                      {previewPhotoWarga.nama}
+                    </h3>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewPhotoWarga(null)}
-                    className="w-9 h-9 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer shrink-0"
-                    title="Tutup detail"
-                    aria-label="Tutup detail data warga"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200">
+                      {previewPhotoWarga.role === 'admin'
+                        ? 'Ketua RT'
+                        : previewPhotoWarga.role === 'pengurus'
+                        ? 'Pengurus RT'
+                        : previewPhotoWarga.role === 'bendahara'
+                        ? 'Bendahara'
+                        : previewPhotoWarga.role === 'sekretaris'
+                        ? 'Sekretaris'
+                        : 'Warga'}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400">
+                      {previewPhotoWarga.alamat || 'RT 01'}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4">
-                  <section className="bg-slate-50 rounded-2xl border border-slate-200 p-3.5">
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Identitas Warga</p>
-                        <p className="text-sm font-extrabold text-slate-900 mt-0.5">{previewPhotoWarga.nama || '-'}</p>
-                      </div>
-                      <HouseBadge warga={previewPhotoWarga} size="md" />
+                <button
+                  type="button"
+                  onClick={() => setPreviewPhotoWarga(null)}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer shrink-0"
+                  title="Tutup"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Tampilan Foto Profil Utama */}
+              <div className="w-full aspect-square rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center relative shadow-inner border border-slate-200">
+                {previewPhotoWarga.photo ? (
+                  <img 
+                    src={previewPhotoWarga.photo} 
+                    alt={previewPhotoWarga.nama} 
+                    className="w-full h-full object-contain" 
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-6 text-center text-slate-400">
+                    <div className="w-20 h-20 rounded-full bg-slate-800 text-teal-400 flex items-center justify-center text-3xl font-black mb-3 border-2 border-slate-700">
+                      {(previewPhotoWarga.nama || 'W').charAt(0).toUpperCase()}
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      <div className="bg-white rounded-xl border border-slate-100 p-2.5">
-                        <p className="text-[9px] font-bold uppercase text-slate-400">Status Warga</p>
-                        <p className="text-xs font-extrabold text-slate-800 mt-1 break-words">{previewApprovalLabel}</p>
-                      </div>
-                      <div className="bg-white rounded-xl border border-slate-100 p-2.5">
-                        <p className="text-[9px] font-bold uppercase text-slate-400">Jumlah Keluarga</p>
-                        <p className="text-xs font-extrabold text-teal-700 mt-1">{previewMembers.length + 1} Jiwa</p>
-                      </div>
-                      <div className="bg-white rounded-xl border border-slate-100 p-2.5 col-span-2 sm:col-span-1">
-                        <p className="text-[9px] font-bold uppercase text-slate-400">RT / Lingkungan</p>
-                        <p className="text-xs font-extrabold text-slate-800 mt-1">{previewPhotoWarga.rt || 'RT 01'}</p>
-                      </div>
+                    <p className="text-xs font-bold text-slate-300">Belum Mengunggah Foto Profil</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Foto kustom belum diatur pada akun ini</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Rincian Profil & No. KK di Modal Pratinjau */}
+              <div className="mt-3 space-y-2">
+                {getResolvedNoKk(previewPhotoWarga) ? (
+                  <div className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200/90 rounded-2xl p-2.5 flex items-center justify-between gap-2 shadow-2xs">
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-extrabold text-teal-700 uppercase tracking-wider">No. Kartu Keluarga (KK)</p>
+                      <p className="font-mono font-black text-xs sm:text-sm text-teal-950 tracking-wider mt-0.5 truncate">
+                        {getResolvedNoKk(previewPhotoWarga)}
+                      </p>
                     </div>
-                  </section>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const num = getResolvedNoKk(previewPhotoWarga);
+                        navigator.clipboard.writeText(num);
+                        showStatusBanner(`No. KK ${num} berhasil disalin!`);
+                      }}
+                      className="px-2.5 py-1 text-[10px] font-extrabold bg-white hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-xl transition-colors cursor-pointer shadow-xs shrink-0"
+                    >
+                      Salin
+                    </button>
+                  </div>
+                ) : null}
 
-                  <section className="space-y-2">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Alamat / Domisili</h4>
-                    <div className="bg-white border border-slate-200 rounded-2xl p-3.5">
-                      <p className="text-sm font-bold text-slate-800 break-words">{previewPhotoWarga.alamat || 'Alamat belum dilengkapi'}</p>
-                      {previewPhotoWarga.alamatKk && canPreviewKk && (
-                        <p className="text-xs text-slate-500 mt-1.5">Alamat asal KK: {previewPhotoWarga.alamatKk}</p>
-                      )}
-                    </div>
-                  </section>
-
-                  {canPreviewPrivateData && (
-                    <section className="space-y-2">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Data Pribadi</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-white border border-slate-200 rounded-xl p-3 min-w-0">
-                          <p className="text-[9px] font-bold uppercase text-slate-400">Username</p>
-                          <p className="text-xs font-bold text-slate-800 mt-1 break-all">{previewPhotoWarga.username ? `@${previewPhotoWarga.username}` : '-'}</p>
-                        </div>
-                        <div className="bg-white border border-slate-200 rounded-xl p-3 min-w-0">
-                          <p className="text-[9px] font-bold uppercase text-slate-400">Nomor HP</p>
-                          <p className="text-xs font-bold text-slate-800 mt-1 break-words">{previewPhotoWarga.noHp || '-'}</p>
-                        </div>
-                        <div className="bg-white border border-slate-200 rounded-xl p-3 min-w-0">
-                          <p className="text-[9px] font-bold uppercase text-slate-400">Jenis Kelamin</p>
-                          <p className="text-xs font-bold text-slate-800 mt-1">{inferJenisKelamin(previewPhotoWarga.nama || '', 'Kepala Keluarga', previewPhotoWarga.jenisKelamin)}</p>
-                        </div>
-                        <div className="bg-white border border-slate-200 rounded-xl p-3 min-w-0">
-                          <p className="text-[9px] font-bold uppercase text-slate-400">Usia</p>
-                          <p className="text-xs font-bold text-slate-800 mt-1">{previewAge >= 0 ? `${previewAge} tahun` : '-'}</p>
-                        </div>
-                        <div className="bg-white border border-slate-200 rounded-xl p-3 min-w-0 col-span-2">
-                          <p className="text-[9px] font-bold uppercase text-slate-400">Tanggal Lahir</p>
-                          <p className="text-xs font-bold text-slate-800 mt-1">{formatTanggalLahirWarga(previewPhotoWarga.tglLahir, previewAge >= 0 ? previewAge : undefined)}</p>
-                        </div>
-                      </div>
-                    </section>
-                  )}
-
-                  {canPreviewKk && (
-                    <section className="space-y-2">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Informasi Kartu Keluarga</h4>
-                      <div className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl p-3.5">
-                        <p className="text-[9px] font-extrabold text-teal-700 uppercase tracking-wider">Nomor Kartu Keluarga</p>
-                        <div className="flex items-center justify-between gap-2 mt-1">
-                          <p className="font-mono font-black text-sm text-teal-950 tracking-wider break-all">{previewNoKk || 'Belum tersedia'}</p>
-                          {previewNoKk && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard?.writeText(previewNoKk);
-                                showStatusBanner('Nomor KK berhasil disalin!');
-                              }}
-                              className="shrink-0 px-2.5 py-1.5 rounded-lg bg-white border border-teal-200 text-teal-700 text-[10px] font-extrabold hover:bg-teal-100 cursor-pointer"
-                            >Salin</button>
-                          )}
-                        </div>
-                        {previewPhotoWarga.hasKk && (
-                          <p className="text-[10px] text-teal-800 mt-2">Dokumen KK sudah diunggah.</p>
-                        )}
-                        {previewPhotoWarga.kkWilayah && (
-                          <p className="text-[10px] text-teal-800 mt-1">Wilayah asal: {previewPhotoWarga.kkWilayah}</p>
-                        )}
-                      </div>
-                    </section>
-                  )}
-
-                  {canPreviewFamily && (
-                    <section className="space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Data Anggota Keluarga</h4>
-                        <span className="text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-100 rounded-full px-2 py-1">{previewMembers.length} Anggota</span>
-                      </div>
-                      {previewMembers.length > 0 ? (
-                        <div className="space-y-2">
-                          {previewMembers.map((member: any, index: number) => {
-                            const memberAge = resolvePersonAge(member.age, member.tglLahir);
-                            return (
-                              <div key={member.id || member._id || `${member.name || 'anggota'}-${index}`} className="bg-white border border-slate-200 rounded-xl p-3 flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="text-xs font-extrabold text-slate-800 break-words">{member.name || 'Anggota keluarga'}</p>
-                                  <p className="text-[10px] font-semibold text-slate-500 mt-0.5">{member.role || 'Anggota keluarga'}</p>
-                                  {member.tglLahir && <p className="text-[10px] text-slate-500 mt-1">Lahir: {formatTanggalLahirWarga(member.tglLahir, memberAge >= 0 ? memberAge : undefined)}</p>}
-                                </div>
-                                <span className="shrink-0 text-[10px] font-extrabold bg-teal-50 text-teal-700 border border-teal-100 rounded-lg px-2 py-1">{memberAge >= 0 ? `${memberAge} th` : 'Usia -'}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-4 text-center text-xs font-medium text-slate-500">Belum ada anggota keluarga yang tercatat.</div>
-                      )}
-                    </section>
-                  )}
-
-                  <section className="space-y-2">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Dokumen Kependudukan</h4>
-                    <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-xs font-extrabold text-slate-800">{previewDocumentList.length > 0 ? `${previewDocumentList.length} dokumen tersedia` : 'Belum ada dokumen yang diunggah'}</p>
-                        <p className="text-[10px] text-slate-500 mt-0.5">{previewPhotoWarga.hasKk || previewPhotoWarga.dokumenKk ? 'KK tersedia' : 'KK belum tersedia'} · {previewKtpFiles.length > 0 ? `${previewKtpFiles.length} KTP tersedia` : 'KTP belum tersedia'}</p>
-                      </div>
-                      {canPreviewDocuments && previewDocumentList.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPreviewPhotoWarga(null);
-                            setPreviewDocs({ docs: previewDocumentList, currentIndex: 0, wargaName: previewPhotoWarga.nama || 'Warga' });
-                          }}
-                          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[10px] font-extrabold transition-colors cursor-pointer"
-                        >
-                          <icons.eye className="w-3.5 h-3.5" /> Lihat Dokumen
-                        </button>
-                      )}
-                    </div>
-                  </section>
-
-                  {!canPreviewPrivateData && !canPreviewFamily && (
-                    <p className="text-[10px] leading-relaxed text-slate-400 bg-slate-50 rounded-xl p-3 border border-slate-100">
-                      Informasi nomor telepon, tanggal lahir, nomor KK, dan rincian anggota keluarga hanya dapat dilihat oleh pemilik akun atau pengurus yang memiliki wewenang.
+                <div className="grid grid-cols-2 gap-2 text-left">
+                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase">Status Warga</p>
+                    <p className="text-xs font-bold text-slate-800 mt-0.5 truncate">{previewPhotoWarga.status || 'Warga Tetap'}</p>
+                  </div>
+                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase">Keluarga</p>
+                    <p className="text-xs font-bold text-teal-700 mt-0.5 truncate">
+                      👨‍👩‍👧‍👦 {((previewPhotoWarga.members || []).length) + 1} Jiwa
                     </p>
-                  )}
+                  </div>
                 </div>
+              </div>
 
-                <div className="shrink-0 border-t border-slate-100 bg-white p-3 sm:p-4 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPreviewPhotoWarga(null)}
-                    className="w-full py-3 bg-teal-600 hover:bg-teal-700 active:scale-[0.99] text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer"
-                  >
-                    Tutup Detail
-                  </button>
-                </div>
-              </motion.div>
+              {/* Tombol Tutup */}
+              <button
+                type="button"
+                onClick={() => setPreviewPhotoWarga(null)}
+                className="w-full mt-4 py-3 bg-teal-600 hover:bg-teal-700 active:scale-98 text-white font-extrabold text-xs rounded-2xl shadow-md transition-all cursor-pointer"
+              >
+                Tutup Pratinjau Foto
+              </button>
             </motion.div>
-          );
-        })()}
+          </div>
+        )}
       </AnimatePresence>
 
       {/* Document Preview Modal */}
@@ -4512,6 +4639,37 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                   )}
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL SERAH-TERIMA JABATAN KETUA RT */}
+      <AnimatePresence>
+        {showKetuaTransferModal && canManageKetuaRtTransfer && (
+          <div className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 12 }} className="w-full max-w-md overflow-hidden rounded-3xl border border-amber-100 bg-white shadow-2xl">
+              <div className="bg-gradient-to-r from-amber-600 to-orange-600 px-5 py-5 text-white">
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-100">Konfirmasi permanen</p>
+                <h4 className="mt-1 text-lg font-black">Serahkan Jabatan Ketua RT</h4>
+                <p className="mt-1 text-[11px] leading-relaxed text-amber-50">Akun Anda akan berubah menjadi Warga dan sesi Anda akan berakhir setelah serah-terima berhasil.</p>
+              </div>
+              <form onSubmit={handleKetuaRoleTransfer} className="space-y-4 p-5">
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-extrabold text-slate-700">Pilih warga penerima jabatan</span>
+                  <select required value={transferTargetId} onChange={e => setTransferTargetId(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100">
+                    <option value="">-- Pilih warga aktif --</option>
+                    {eligibleKetuaTransferTargets.map((w: any) => <option key={w.id} value={w.id}>{w.nama || w.username} {w.alamat ? `— ${w.alamat}` : ''}</option>)}
+                  </select>
+                </label>
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-[11px] leading-relaxed text-rose-800">
+                  <strong>Perhatian:</strong> Jabatan hanya dapat dipindahkan satu kali untuk RT ini. Setelah berhasil, role penerima menjadi Ketua RT, role Anda menjadi Warga, dan kedua akun harus login ulang. Pastikan penerima sudah menyetujui tanggung jawab tersebut.
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" disabled={isTransferringKetuaRole} onClick={() => setShowKetuaTransferModal(false)} className="flex-1 rounded-xl bg-slate-100 px-3 py-3 text-xs font-extrabold text-slate-600 hover:bg-slate-200 disabled:opacity-50">Batal</button>
+                  <button type="submit" disabled={!transferTargetId || isTransferringKetuaRole} className="flex-1 rounded-xl bg-amber-600 px-3 py-3 text-xs font-extrabold text-white shadow-sm hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50">{isTransferringKetuaRole ? 'Memproses…' : 'Ya, Serahkan Jabatan'}</button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}
