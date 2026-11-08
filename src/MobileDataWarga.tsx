@@ -222,9 +222,17 @@ const getResolvedNoKk = (w: any): string => {
   return '';
 };
 
-// Membuat file .xlsx sederhana tanpa dependensi tambahan. Seluruh isi ditulis
-// sebagai teks agar nomor KK/identitas dan angka berawalan nol tidak berubah.
-const createBkkbnXlsxBlob = (sheetName: string, headers: string[], rows: string[][]): Blob => {
+// Generator workbook XLSX ringan tanpa dependensi tambahan.
+// Data disimpan sebagai inline string agar Nomor KK/HP tidak berubah menjadi angka eksponensial.
+// Layout menggunakan judul, metadata, header berwarna, zebra rows, filter Excel,
+// freeze pane, lebar kolom terukur, dan pengaturan cetak landscape.
+const createBkkbnXlsxBlob = (
+  sheetName: string,
+  headers: string[],
+  rows: string[][],
+  reportTitle = `REKAP ${sheetName.toUpperCase()}`,
+  reportSubtitle = `Diekspor pada ${new Date().toLocaleDateString('id-ID')}`
+): Blob => {
   const encoder = new TextEncoder();
   const xmlEscape = (value: unknown): string => String(value ?? '')
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
@@ -240,23 +248,49 @@ const createBkkbnXlsxBlob = (sheetName: string, headers: string[], rows: string[
     }
     return name;
   };
-  const worksheetRows = [headers, ...rows];
-  const sheetData = worksheetRows.map((row, rowIndex) => {
-    const cells = headers.map((_, colIndex) => {
-      const ref = `${columnName(colIndex)}${rowIndex + 1}`;
-      const value = xmlEscape(row[colIndex] ?? '');
-      const style = rowIndex === 0 ? ' s="1"' : '';
-      return `<c r="${ref}"${style} t="inlineStr"><is><t xml:space="preserve">${value}</t></is></c>`;
-    }).join('');
-    return `<row r="${rowIndex + 1}">${cells}</row>`;
-  }).join('');
-  const lastCell = `${columnName(Math.max(headers.length - 1, 0))}${Math.max(worksheetRows.length, 1)}`;
-  const widths = headers.map((header, index) => {
-    const samples = rows.slice(0, 80).map(row => String(row[index] ?? '').length);
-    const width = Math.max(String(header).length + 2, ...samples, 12);
-    return `<col min="${index + 1}" max="${index + 1}" width="${Math.min(width, 38)}" customWidth="1"/>`;
-  }).join('');
   const safeSheetName = sheetName.replace(/[\\/?*\[\]:]/g, ' ').slice(0, 31) || 'Data';
+  const columnCount = Math.max(headers.length, 1);
+  const lastColumn = columnName(columnCount - 1);
+  const lastRow = Math.max(rows.length + 4, 4);
+  const lastCell = `${lastColumn}${lastRow}`;
+  const makeCell = (columnIndex: number, rowIndex: number, value: unknown, style: number) => {
+    const ref = `${columnName(columnIndex)}${rowIndex}`;
+    return `<c r="${ref}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(value)}</t></is></c>`;
+  };
+
+  const titleRow = `<row r="1" ht="32" customHeight="1">${makeCell(0, 1, reportTitle, 2)}</row>`;
+  const subtitleRow = `<row r="2" ht="23" customHeight="1">${makeCell(0, 2, reportSubtitle, 3)}</row>`;
+  const spacerRow = '<row r="3" ht="8" customHeight="1"/>';
+  const headerCells = headers.map((header, index) => makeCell(index, 4, header, 1)).join('');
+  const headerRow = `<row r="4" ht="32" customHeight="1">${headerCells}</row>`;
+  const dataRows = rows.map((row, index) => {
+    const rowNumber = index + 5;
+    const cells = headers.map((header, colIndex) => {
+      const label = String(header || '').toLowerCase();
+      const centered = colIndex === 0 || /umur|tanggal lahir|jenis kelamin|status warga/.test(label);
+      const striped = index % 2 === 1;
+      const style = centered ? (striped ? 7 : 6) : (striped ? 5 : 4);
+      return makeCell(colIndex, rowNumber, row[colIndex] ?? '', style);
+    }).join('');
+    return `<row r="${rowNumber}" ht="27" customHeight="1">${cells}</row>`;
+  }).join('');
+
+  const widths = headers.map((header, index) => {
+    const label = String(header || '').toLowerCase();
+    let width = 18;
+    if (index === 0 || label === 'no') width = 7;
+    else if (/nomor kk|no\. kk/.test(label)) width = 21;
+    else if (/alamat/.test(label)) width = 36;
+    else if (/nama|kepala keluarga|suami|istri/.test(label)) width = 25;
+    else if (/hubungan|jabatan|status|kategori/.test(label)) width = 21;
+    else if (/tanggal lahir/.test(label)) width = 17;
+    else if (/umur|jenis kelamin/.test(label)) width = 15;
+    else if (/blok/.test(label)) width = 13;
+    else if (/hp/.test(label)) width = 18;
+    const longestSample = Math.max(0, ...rows.slice(0, 100).map(row => String(row[index] ?? '').length));
+    width = Math.max(width, Math.min(longestSample + 2, /alamat/.test(label) ? 36 : 28));
+    return `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`;
+  }).join('');
 
   const files: Array<{ name: string; content: string }> = [
     {
@@ -277,11 +311,11 @@ const createBkkbnXlsxBlob = (sheetName: string, headers: string[], rows: string[
     },
     {
       name: 'xl/styles.xml',
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0F766E"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="4"><font><sz val="10"/><name val="Aptos"/><color rgb="FF1E293B"/></font><font><b/><sz val="10"/><name val="Aptos"/><color rgb="FFFFFFFF"/></font><font><b/><sz val="16"/><name val="Aptos Display"/><color rgb="FF115E59"/></font><font><i/><sz val="10"/><name val="Aptos"/><color rgb="FF64748B"/></font></fonts><fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0F766E"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF0FDFA"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFE2E8F0"/></left><right style="thin"><color rgb="FFE2E8F0"/></right><top style="thin"><color rgb="FFE2E8F0"/></top><bottom style="thin"><color rgb="FFE2E8F0"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="8"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`
     },
     {
       name: 'xl/worksheets/sheet1.xml',
-      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="18"/><cols>${widths}</cols><sheetData>${sheetData}</sheetData><autoFilter ref="A1:${lastCell}"/></worksheet>`
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:${lastCell}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="4" topLeftCell="A5" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A5" sqref="A5"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="22"/><cols>${widths}</cols><sheetData>${titleRow}${subtitleRow}${spacerRow}${headerRow}${dataRows}</sheetData><autoFilter ref="A4:${lastColumn}${lastRow}"/><mergeCells count="2"><mergeCell ref="A1:${lastColumn}1"/><mergeCell ref="A2:${lastColumn}2"/></mergeCells><printOptions horizontalCentered="1"/><pageMargins left="0.25" right="0.25" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>`
     }
   ];
 
@@ -363,8 +397,15 @@ const createBkkbnXlsxBlob = (sheetName: string, headers: string[], rows: string[
   return new Blob([zipBytes.buffer as ArrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 };
 
-const downloadBkkbnXlsx = (filename: string, sheetName: string, headers: string[], rows: string[][]) => {
-  const blob = createBkkbnXlsxBlob(sheetName, headers, rows);
+const downloadBkkbnXlsx = (
+  filename: string,
+  sheetName: string,
+  headers: string[],
+  rows: string[][],
+  reportTitle?: string,
+  reportSubtitle?: string
+) => {
+  const blob = createBkkbnXlsxBlob(sheetName, headers, rows, reportTitle, reportSubtitle);
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -1745,7 +1786,14 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
   };
 
   const exportBkkbnDataToExcel = () => {
-    const dateStamp = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const dateStamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const filterSummary = [
+      `Umur: ${bkkbnAgeRange === 'semua' ? '15-49 tahun' : `${bkkbnAgeRange} tahun`}`,
+      `Blok: ${bkkbnBlockFilter || 'Semua'}`,
+      `Pencarian: ${bkkbnSearchQuery.trim() || 'Tidak ada'}`
+    ].join(' | ');
+
     if (selectedBkkbnCategory === 'wus') {
       const headers = ['No', 'Nama WUS', 'Umur (Tahun)', 'Tanggal Lahir', 'Hubungan dalam KK', 'Jenis Kelamin', 'Kepala Keluarga', 'Nomor KK', 'Blok', 'Alamat Lengkap'];
       const rows = filteredBkkbnWusPersons.map((person, index) => [
@@ -1753,7 +1801,11 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
         person.hubungan || '-', person.jenisKelamin || 'Perempuan', person.kepalaKeluarga || '-', getResolvedNoKk(person.wargaObj) || '-',
         person.blokShort || '-', person.wargaObj?.alamat || person.blokFormatted || '-'
       ]);
-      downloadBkkbnXlsx(`Data_WUS_RT_${dateStamp}.xlsx`, 'Data WUS', headers, rows);
+      downloadBkkbnXlsx(
+        `Data_WUS_RT_${dateStamp}.xlsx`, 'Data WUS', headers, rows,
+        'REKAP DATA WANITA USIA SUBUR (WUS)',
+        `Data RT • Diekspor ${now.toLocaleDateString('id-ID')} • ${rows.length} data • ${filterSummary}`
+      );
       showStatusBanner(`Export Excel WUS berhasil: ${rows.length} data sesuai filter.`);
       return;
     }
@@ -1764,7 +1816,11 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
         String(index + 1), family.wife, String(family.wifeAge), family.husband,
         family.family || '-', family.noKk || '-', family.blokShort || '-', family.address || '-'
       ]);
-      downloadBkkbnXlsx(`Data_PUS_RT_${dateStamp}.xlsx`, 'Data PUS', headers, rows);
+      downloadBkkbnXlsx(
+        `Data_PUS_RT_${dateStamp}.xlsx`, 'Data PUS', headers, rows,
+        'REKAP DATA PASANGAN USIA SUBUR (PUS)',
+        `Data RT • Diekspor ${now.toLocaleDateString('id-ID')} • ${rows.length} pasangan • ${filterSummary}`
+      );
       showStatusBanner(`Export Excel PUS berhasil: ${rows.length} pasangan sesuai filter.`);
     }
   };
@@ -1803,16 +1859,15 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
       });
   }, [allPersonsList, selectedAgeCategory, ageCategoryGenderFilter, ageCategorySearch]);
 
-  const exportAgeCategoryToCsv = () => {
+  const exportAgeCategoryToExcel = () => {
     if (!selectedAgeCategory) return;
     const headers = ['No', 'No. KK', 'Nama Lengkap', 'Hubungan Keluarga', 'Kepala Keluarga', 'Blok / Alamat', 'Jenis Kelamin', 'Tanggal Lahir', 'Umur (Tahun)'];
     const rows = filteredSelectedAgePersons.map((p, idx) => {
       const canSeeKk = isPrivilegedKkViewer || isOwnAccount(p.wargaObj);
       const rawKk = canSeeKk ? getResolvedNoKk(p.wargaObj) : '';
-      const formattedKk = rawKk ? `\t${rawKk}` : '-';
       return [
         String(idx + 1),
-        formattedKk,
+        rawKk || '-',
         p.nama,
         p.hubungan,
         p.kepalaKeluarga,
@@ -1822,20 +1877,22 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
         `${p.umur} Tahun`
       ];
     });
-
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Data_Warga_${selectedAgeCategory.toUpperCase()}_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showStatusBanner(`Laporan Excel (CSV) kategori ${selectedAgeCategory.toUpperCase()} berhasil diunduh!`);
+    const now = new Date();
+    const dateStamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const categoryLabel = selectedAgeCategory.toUpperCase();
+    const filterSummary = `Kategori ${categoryLabel} • Gender: ${ageCategoryGenderFilter} • Pencarian: ${ageCategorySearch.trim() || 'Tidak ada'}`;
+    downloadBkkbnXlsx(
+      `Data_Warga_${categoryLabel}_${dateStamp}.xlsx`,
+      `Usia ${categoryLabel}`,
+      headers,
+      rows,
+      `REKAP DATA WARGA KATEGORI ${categoryLabel}`,
+      `Diekspor ${now.toLocaleDateString('id-ID')} • ${rows.length} data • ${filterSummary}`
+    );
+    showStatusBanner(`Export Excel kategori ${categoryLabel} berhasil: ${rows.length} data.`);
   };
 
-  const exportFilteredWargaToCsv = () => {
+  const exportFilteredWargaToExcel = () => {
     const rawSource =
       !filterAgeCategory && !filterBlok && !debouncedSearchQuery && allWargaFullData.length > 0
         ? allWargaFullData.filter(w => w.role !== 'developer')
@@ -1887,8 +1944,8 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
       const headDob = formatTanggalLahirWarga(w.tglLahir, headAge >= 0 ? headAge : undefined);
       const canSeeKk = isPrivilegedKkViewer || isOwnAccount(w);
       const rawNoKk = canSeeKk ? getResolvedNoKk(w) : '';
-      // Prefix with tab (\t) so Microsoft Excel treats 16-digit KK number as text instead of 3.60E+15
-      const headNoKk = rawNoKk ? `\t${rawNoKk}` : '-';
+      // Workbook menulis seluruh nilai sebagai teks agar No. KK tetap 16 digit.
+      const headNoKk = rawNoKk || '-';
       const roleLabel =
         w.role === 'admin'
           ? 'Ketua RT'
@@ -1913,7 +1970,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
           headDob,
           headAge >= 0 ? `${headAge} Tahun` : '-',
           getAgeCategoryLabel(headAge),
-          w.noHp ? `\t${w.noHp}` : '-',
+          w.noHp || '-',
           w.status || 'Warga Tetap',
           roleLabel
         ]);
@@ -1945,7 +2002,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
               mDob,
               mAge >= 0 ? `${mAge} Tahun` : '-',
               getAgeCategoryLabel(mAge),
-              w.noHp ? `\t${w.noHp}` : '-',
+              w.noHp || '-',
               w.status || 'Warga Tetap',
               'Anggota Keluarga'
             ]);
@@ -1954,30 +2011,23 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
       }
     });
 
-    const csvContent =
-      '\uFEFF' +
-      [
-        headers.join(','),
-        ...rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
-      ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
     const filterParts: string[] = [];
-    if (filterBlok) filterParts.push(`Blok_${filterBlok}`);
-    if (filterAgeCategory) filterParts.push(`Usia_${filterAgeCategory.toUpperCase()}`);
-    if (debouncedSearchQuery.trim()) filterParts.push('Pencarian');
-    const suffix = filterParts.length > 0 ? filterParts.join('_') : 'Semua';
-    const dateStr = new Date().toISOString().split('T')[0];
+    if (filterBlok) filterParts.push(`Blok ${filterBlok}`);
+    if (filterAgeCategory) filterParts.push(`Usia ${filterAgeCategory.toUpperCase()}`);
+    if (debouncedSearchQuery.trim()) filterParts.push(`Pencarian: ${debouncedSearchQuery.trim()}`);
+    const filterSummary = filterParts.length > 0 ? filterParts.join(' • ') : 'Semua data warga';
+    const now = new Date();
+    const dateStamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Laporan_Data_Warga_${suffix}_${dateStr}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    showStatusBanner(`Berhasil mengunduh ${rows.length} baris data warga ke format Excel (CSV)!`);
+    downloadBkkbnXlsx(
+      `Laporan_Data_Warga_${dateStamp}.xlsx`,
+      'Data Warga',
+      headers,
+      rows,
+      'REKAP DATA WARGA RT',
+      `Diekspor ${now.toLocaleDateString('id-ID')} • ${rows.length} baris individu • ${filterSummary}`
+    );
+    showStatusBanner(`Berhasil mengunduh ${rows.length} baris data warga ke Excel (.xlsx).`);
   };
 
   const resolvePersonAge = (rawAge: any, rawDob?: string): number => {
@@ -2619,17 +2669,17 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
 
           {/* DATA WUS & PUS BKKBN KHUSUS KETUA RT DAN SEKRETARIS */}
           {canViewBkkbnData && (
-            <section className="mb-6 rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4 sm:p-5 shadow-sm">
+            <section className="mb-6 w-full min-w-0 rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4 sm:p-5 lg:p-6 shadow-sm">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="text-xs font-black uppercase tracking-wider text-emerald-900">Pendataan Keluarga Berencana</p>
                   <h3 className="mt-1 text-lg font-black text-slate-900">Kategori WUS & PUS — BKKBN</h3>
-                  <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-slate-600">Rekap warga aktif berdasarkan umur dan hubungan keluarga yang tercatat pada data RT. Ketuk kategori untuk membuka daftar nama.</p>
+                  <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-slate-600">Rekap warga aktif berdasarkan umur dan hubungan keluarga yang tercatat pada data RT. Klik atau ketuk kategori untuk membuka daftar nama.</p>
                 </div>
                 <span className="rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[10px] font-extrabold text-emerald-800">Khusus Ketua RT & Sekretaris</span>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
                 <button type="button" onClick={() => setSelectedBkkbnCategory(current => current === 'wus' ? null : 'wus')} className={`rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${selectedBkkbnCategory === 'wus' ? 'border-fuchsia-400 bg-fuchsia-50 ring-2 ring-fuchsia-200' : 'border-fuchsia-100 bg-white'}`}>
                   <div className="flex items-center justify-between gap-2">
                     <div>
@@ -2665,17 +2715,17 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                 {selectedBkkbnCategory && (
                   <motion.div initial={{ opacity: 0, y: 8, height: 0 }} animate={{ opacity: 1, y: 0, height: 'auto' }} exit={{ opacity: 0, y: 8, height: 0 }} className="mt-4 overflow-hidden">
                     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                      <div className="flex items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-4 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-4 py-3 md:px-5">
                         <div>
                           <p className="text-sm font-black text-slate-900">{selectedBkkbnCategory === 'wus' ? 'Daftar Wanita Usia Subur' : 'Daftar Pasangan Usia Subur'}</p>
                           <p className="text-[10px] text-slate-500">{selectedBkkbnCategory === 'wus' ? `${filteredBkkbnWusPersons.length} dari ${bkkbnWusPersons.length} perempuan berusia 15–49 tahun` : `${filteredBkkbnPusFamilies.length} dari ${bkkbnPusFamilies.length} pasangan teridentifikasi`}</p>
                         </div>
                         <button type="button" onClick={() => setSelectedBkkbnCategory(null)} className="rounded-lg bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">Tutup ✕</button>
                       </div>
-                      <div className="space-y-3 border-b border-slate-100 bg-white p-3">
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <div className="space-y-3 border-b border-slate-100 bg-white p-3 md:p-4">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-[minmax(240px,1.4fr)_minmax(180px,1fr)_minmax(160px,1fr)]">
                           <label className="relative block sm:col-span-1">
-                            <span className="sr-only">Cari nama atau alamat</span>
+                            <span className="mb-1.5 hidden text-[10px] font-black uppercase tracking-wide text-slate-500 md:block">Pencarian Nama / Alamat</span><span className="sr-only">Cari nama atau alamat</span>
                             <input
                               type="search"
                               value={bkkbnSearchQuery}
@@ -2685,7 +2735,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                             />
                           </label>
                           <label className="block">
-                            <span className="sr-only">Filter kelompok umur</span>
+                            <span className="mb-1.5 hidden text-[10px] font-black uppercase tracking-wide text-slate-500 md:block">Kelompok Umur</span><span className="sr-only">Filter kelompok umur</span>
                             <select value={bkkbnAgeRange} onChange={event => setBkkbnAgeRange(event.target.value as typeof bkkbnAgeRange)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100">
                               <option value="semua">Semua umur (15–49)</option>
                               <option value="15-19">Umur 15–19 tahun</option>
@@ -2695,7 +2745,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                             </select>
                           </label>
                           <label className="block">
-                            <span className="sr-only">Filter blok</span>
+                            <span className="mb-1.5 hidden text-[10px] font-black uppercase tracking-wide text-slate-500 md:block">Blok / Wilayah</span><span className="sr-only">Filter blok</span>
                             <select value={bkkbnBlockFilter} onChange={event => setBkkbnBlockFilter(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-700 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100">
                               <option value="">Semua blok</option>
                               {bkkbnBlokOptions.map(block => <option key={block} value={block}>{block === '-' ? 'Blok belum diisi' : `Blok ${block}`}</option>)}
@@ -2706,34 +2756,102 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                           <p className="text-[10px] font-semibold text-slate-500">Menampilkan {selectedBkkbnCategory === 'wus' ? filteredBkkbnWusPersons.length : filteredBkkbnPusFamilies.length} data setelah filter</p>
                           <div className="flex items-center gap-2">
                             <button type="button" onClick={resetBkkbnFilters} disabled={!bkkbnSearchQuery && bkkbnAgeRange === 'semua' && !bkkbnBlockFilter} className="rounded-lg px-3 py-2 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">Reset Filter</button>
-                            <button type="button" onClick={exportBkkbnDataToExcel} disabled={(selectedBkkbnCategory === 'wus' ? filteredBkkbnWusPersons.length : filteredBkkbnPusFamilies.length) === 0} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-2 text-[10px] font-extrabold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40">
+                            <button type="button" onClick={exportBkkbnDataToExcel} disabled={(selectedBkkbnCategory === 'wus' ? filteredBkkbnWusPersons.length : filteredBkkbnPusFamilies.length) === 0} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-700 px-4 py-2.5 text-[11px] font-extrabold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-800 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40">
                               <icons.document className="h-3.5 w-3.5" /> Export Excel (.xlsx)
                             </button>
                           </div>
                         </div>
                       </div>
                       {selectedBkkbnCategory === 'wus' ? (
-                        filteredBkkbnWusPersons.length > 0 ? (
-                          <div className="max-h-80 divide-y divide-slate-100 overflow-y-auto">
-                            {filteredBkkbnWusPersons.map(person => (
+                        <>
+                          {/* Tampilan tabel khusus website / desktop */}
+                          <div className="hidden md:block max-h-[30rem] overflow-auto border-t border-slate-100">
+                            {filteredBkkbnWusPersons.length > 0 ? (
+                              <table className="min-w-[980px] w-full border-collapse text-left text-[11px]">
+                                <thead className="sticky top-0 z-10 bg-slate-100 text-[10px] font-black uppercase tracking-wide text-slate-600 shadow-sm">
+                                  <tr>
+                                    <th className="px-3 py-3 text-center">No.</th>
+                                    <th className="px-3 py-3">Nama WUS</th>
+                                    <th className="px-3 py-3 text-center">Umur</th>
+                                    <th className="px-3 py-3">Tanggal Lahir</th>
+                                    <th className="px-3 py-3">Hubungan KK</th>
+                                    <th className="px-3 py-3">Kepala Keluarga</th>
+                                    <th className="px-3 py-3">No. KK</th>
+                                    <th className="px-3 py-3">Blok / Alamat</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {filteredBkkbnWusPersons.map((person, index) => (
+                                    <tr key={person.id} className="odd:bg-white even:bg-slate-50/70 hover:bg-fuchsia-50/60 transition-colors">
+                                      <td className="px-3 py-3 text-center font-semibold text-slate-400">{index + 1}</td>
+                                      <td className="px-3 py-3 font-extrabold text-slate-800">{person.nama}</td>
+                                      <td className="px-3 py-3 text-center"><span className="rounded-full bg-fuchsia-50 px-2.5 py-1 font-black text-fuchsia-800">{person.umur} th</span></td>
+                                      <td className="px-3 py-3 whitespace-nowrap text-slate-600">{person.tglLahirFormatted || '-'}</td>
+                                      <td className="px-3 py-3 text-slate-600">{person.hubungan || '-'}</td>
+                                      <td className="px-3 py-3 font-semibold text-slate-700">{person.kepalaKeluarga || '-'}</td>
+                                      <td className="px-3 py-3 font-mono text-slate-600">{getResolvedNoKk(person.wargaObj) || '-'}</td>
+                                      <td className="px-3 py-3 text-slate-600">{person.wargaObj?.alamat || person.blokFormatted || '-'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            ) : <p className="px-4 py-8 text-center text-xs text-slate-500">Tidak ada data WUS yang cocok dengan filter.</p>}
+                          </div>
+                          {/* Tampilan kartu untuk ponsel */}
+                          <div className="md:hidden max-h-80 divide-y divide-slate-100 overflow-y-auto">
+                            {filteredBkkbnWusPersons.length > 0 ? filteredBkkbnWusPersons.map(person => (
                               <div key={person.id} className="flex items-center justify-between gap-3 px-4 py-3">
                                 <div className="min-w-0"><p className="truncate text-xs font-extrabold text-slate-800">{person.nama}</p><p className="mt-0.5 truncate text-[10px] text-slate-500">{person.blokFormatted} • KK: {person.kepalaKeluarga}</p></div>
                                 <span className="shrink-0 rounded-full bg-fuchsia-50 px-2.5 py-1 text-[10px] font-black text-fuchsia-800">{person.umur} tahun</span>
                               </div>
-                            ))}
+                            )) : <p className="px-4 py-6 text-center text-xs text-slate-500">Tidak ada data WUS yang cocok dengan filter. Coba ubah pencarian, kelompok umur, atau blok.</p>}
                           </div>
-                        ) : <p className="px-4 py-6 text-center text-xs text-slate-500">Tidak ada data WUS yang cocok dengan filter. Coba ubah pencarian, kelompok umur, atau blok.</p>
+                        </>
                       ) : (
-                        filteredBkkbnPusFamilies.length > 0 ? (
-                          <div className="max-h-80 divide-y divide-slate-100 overflow-y-auto">
-                            {filteredBkkbnPusFamilies.map(pair => (
-                              <div key={pair.id} className="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-2">
+                        <>
+                          {/* Tampilan tabel khusus website / desktop */}
+                          <div className="hidden md:block max-h-[30rem] overflow-auto border-t border-slate-100">
+                            {filteredBkkbnPusFamilies.length > 0 ? (
+                              <table className="min-w-[980px] w-full border-collapse text-left text-[11px]">
+                                <thead className="sticky top-0 z-10 bg-slate-100 text-[10px] font-black uppercase tracking-wide text-slate-600 shadow-sm">
+                                  <tr>
+                                    <th className="px-3 py-3 text-center">No.</th>
+                                    <th className="px-3 py-3">Nama Istri</th>
+                                    <th className="px-3 py-3 text-center">Umur Istri</th>
+                                    <th className="px-3 py-3">Nama Suami</th>
+                                    <th className="px-3 py-3">Kepala Keluarga</th>
+                                    <th className="px-3 py-3">No. KK</th>
+                                    <th className="px-3 py-3">Blok</th>
+                                    <th className="px-3 py-3">Alamat</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {filteredBkkbnPusFamilies.map((pair, index) => (
+                                    <tr key={pair.id} className="odd:bg-white even:bg-slate-50/70 hover:bg-teal-50/60 transition-colors">
+                                      <td className="px-3 py-3 text-center font-semibold text-slate-400">{index + 1}</td>
+                                      <td className="px-3 py-3 font-extrabold text-slate-800">{pair.wife}</td>
+                                      <td className="px-3 py-3 text-center"><span className="rounded-full bg-teal-50 px-2.5 py-1 font-black text-teal-800">{pair.wifeAge} th</span></td>
+                                      <td className="px-3 py-3 font-semibold text-slate-700">{pair.husband}</td>
+                                      <td className="px-3 py-3 text-slate-600">{pair.family || '-'}</td>
+                                      <td className="px-3 py-3 font-mono text-slate-600">{pair.noKk || '-'}</td>
+                                      <td className="px-3 py-3 text-slate-600">{pair.blokShort || '-'}</td>
+                                      <td className="px-3 py-3 text-slate-600">{pair.address || '-'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            ) : <p className="px-4 py-8 text-center text-xs text-slate-500">Tidak ada pasangan PUS yang cocok dengan filter.</p>}
+                          </div>
+                          {/* Tampilan kartu untuk ponsel */}
+                          <div className="md:hidden max-h-80 divide-y divide-slate-100 overflow-y-auto">
+                            {filteredBkkbnPusFamilies.length > 0 ? filteredBkkbnPusFamilies.map(pair => (
+                              <div key={pair.id} className="grid grid-cols-1 gap-1 px-4 py-3">
                                 <div><p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Istri • {pair.wifeAge} tahun</p><p className="text-xs font-extrabold text-slate-800">{pair.wife}</p></div>
                                 <div><p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Suami</p><p className="text-xs font-extrabold text-slate-800">{pair.husband}</p><p className="mt-0.5 text-[10px] text-slate-500">{pair.address} • KK: {pair.family}</p></div>
                               </div>
-                            ))}
+                            )) : <p className="px-4 py-6 text-center text-xs text-slate-500">Tidak ada pasangan PUS yang cocok dengan filter. Coba ubah pencarian, kelompok umur, atau blok.</p>}
                           </div>
-                        ) : <p className="px-4 py-6 text-center text-xs text-slate-500">Tidak ada pasangan PUS yang cocok dengan filter. Coba ubah pencarian, kelompok umur, atau blok.</p>
+                        </>
                       )}
                     </div>
                   </motion.div>
@@ -3052,11 +3170,11 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={exportAgeCategoryToCsv}
+                        onClick={exportAgeCategoryToExcel}
                         className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold transition shadow-xs cursor-pointer flex items-center gap-1.5"
                       >
                         <span>📥</span>
-                        <span>Unduh Excel</span>
+                        <span>Export Excel (.xlsx)</span>
                       </button>
                       <button
                         type="button"
@@ -3301,16 +3419,16 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                   <span className="sm:hidden">{isRefreshing ? '...' : 'Perbarui'}</span>
                 </button>
 
-                {/* Tombol Unduh Excel (CSV) untuk Pelaporan Offline */}
+                {/* Tombol Export Excel (.xlsx) untuk Pelaporan Offline */}
                 {isPrivilegedKkViewer && (
                   <button
                     type="button"
-                    onClick={exportFilteredWargaToCsv}
-                    title="Unduh data warga yang sedang difilter ke dalam format CSV/Excel"
+                    onClick={exportFilteredWargaToExcel}
+                    title="Export seluruh data warga yang sesuai filter ke workbook Excel (.xlsx)"
                     className="px-3.5 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-2xl text-xs sm:text-sm font-extrabold shadow-sm transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
                   >
                     <span>📥</span>
-                    <span>Unduh Excel</span>
+                    <span>Export Excel (.xlsx)</span>
                   </button>
                 )}
               </div>
