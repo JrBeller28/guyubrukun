@@ -2634,7 +2634,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                                 <td className="py-3 px-3">
                                   <div className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5 hover:text-teal-700">
                                     <span>{person.nama}</span>
-                                    <span className="text-[10px] text-teal-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">👁️ Foto</span>
+                                    <span className="text-[10px] text-teal-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">👁️ Lihat Data</span>
                                   </div>
                                   <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                                     <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 whitespace-nowrap">
@@ -3060,10 +3060,10 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                               setPreviewPhotoWarga(warga);
                             }}
                             className="px-2.5 py-1 text-[11px] font-extrabold bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-xl transition-colors cursor-pointer flex items-center gap-1"
-                            title="Pratinjau profil & identitas warga"
+                            title="Lihat detail data warga"
                           >
-                            <span>📷</span>
-                            <span className="hidden sm:inline">Profil</span>
+                            <icons.eye className="w-3.5 h-3.5" />
+                            <span>Lihat</span>
                           </button>
 
                           {canViewFamily && (
@@ -3625,125 +3625,241 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
             )}
           </AnimatePresence>
 
-      {/* MODAL PRATINJAU FOTO PROFIL WARGA (PHOTO ONLY PREVIEW) */}
+      {/* MODAL DETAIL DATA WARGA */}
       <AnimatePresence>
-        {previewPhotoWarga && (
-          <div 
-            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md"
-            onClick={() => setPreviewPhotoWarga(null)}
-          >
+        {previewPhotoWarga && (() => {
+          const previewOwnAccount = isOwnAccount(previewPhotoWarga);
+          const canPreviewPrivateData = isKetuaRT || previewOwnAccount;
+          const canPreviewKk = isPrivilegedKkViewer || previewOwnAccount;
+          const canPreviewFamily = isKetuaRT || previewOwnAccount;
+          const canPreviewDocuments = isKetuaRT || previewOwnAccount;
+          const previewNoKk = getResolvedNoKk(previewPhotoWarga);
+          const previewAge = resolvePersonAge(previewPhotoWarga.umur, previewPhotoWarga.tglLahir);
+          const previewMembers = Array.isArray(previewPhotoWarga.members) ? previewPhotoWarga.members : [];
+          const previewKtpFiles = Array.isArray(previewPhotoWarga.dokumenKtp)
+            ? previewPhotoWarga.dokumenKtp
+            : previewPhotoWarga.dokumenKtp ? [previewPhotoWarga.dokumenKtp] : [];
+          const previewDocumentList = [
+            ...(previewPhotoWarga.dokumenKk ? [{ url: previewPhotoWarga.dokumenKk, title: 'Kartu Keluarga' }] : []),
+            ...previewKtpFiles.map((url: string, index: number) => ({ url, title: `KTP ${index + 1}` }))
+          ];
+          const previewRoleLabel = previewPhotoWarga.role === 'admin'
+            ? 'Ketua RT / Admin'
+            : previewPhotoWarga.role === 'pengurus'
+              ? 'Pengurus RT'
+              : previewPhotoWarga.role === 'bendahara'
+                ? 'Bendahara'
+                : previewPhotoWarga.role === 'sekretaris'
+                  ? 'Sekretaris'
+                  : 'Warga';
+          const previewApprovalLabel = previewPhotoWarga.isApproved === false
+            ? 'Belum disetujui / Nonaktif'
+            : previewPhotoWarga.status || 'Warga Tetap';
+
+          return (
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 15 }}
-              transition={{ type: "spring", stiffness: 320, damping: 25 }}
-              className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full overflow-hidden border border-slate-100 relative p-5"
-              onClick={e => e.stopPropagation()}
+              key="warga-detail-modal"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-slate-950/75 backdrop-blur-sm p-0 sm:p-4"
+              onClick={() => setPreviewPhotoWarga(null)}
             >
-              {/* Header Modal */}
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-                <div className="min-w-0 pr-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-slate-800 text-base truncate">
-                      {previewPhotoWarga.nama}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200">
-                      {previewPhotoWarga.role === 'admin'
-                        ? 'Ketua RT'
-                        : previewPhotoWarga.role === 'pengurus'
-                        ? 'Pengurus RT'
-                        : previewPhotoWarga.role === 'bendahara'
-                        ? 'Bendahara'
-                        : previewPhotoWarga.role === 'sekretaris'
-                        ? 'Sekretaris'
-                        : 'Warga'}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-400">
-                      {previewPhotoWarga.alamat || 'RT 01'}
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setPreviewPhotoWarga(null)}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer shrink-0"
-                  title="Tutup"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Tampilan Foto Profil Utama */}
-              <div className="w-full aspect-square rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center relative shadow-inner border border-slate-200">
-                {previewPhotoWarga.photo ? (
-                  <img 
-                    src={previewPhotoWarga.photo} 
-                    alt={previewPhotoWarga.nama} 
-                    className="w-full h-full object-contain" 
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-6 text-center text-slate-400">
-                    <div className="w-20 h-20 rounded-full bg-slate-800 text-teal-400 flex items-center justify-center text-3xl font-black mb-3 border-2 border-slate-700">
-                      {(previewPhotoWarga.nama || 'W').charAt(0).toUpperCase()}
-                    </div>
-                    <p className="text-xs font-bold text-slate-300">Belum Mengunggah Foto Profil</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Foto kustom belum diatur pada akun ini</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Rincian Profil & No. KK di Modal Pratinjau */}
-              <div className="mt-3 space-y-2">
-                {getResolvedNoKk(previewPhotoWarga) ? (
-                  <div className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200/90 rounded-2xl p-2.5 flex items-center justify-between gap-2 shadow-2xs">
-                    <div className="min-w-0">
-                      <p className="text-[9px] font-extrabold text-teal-700 uppercase tracking-wider">No. Kartu Keluarga (KK)</p>
-                      <p className="font-mono font-black text-xs sm:text-sm text-teal-950 tracking-wider mt-0.5 truncate">
-                        {getResolvedNoKk(previewPhotoWarga)}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const num = getResolvedNoKk(previewPhotoWarga);
-                        navigator.clipboard.writeText(num);
-                        showStatusBanner(`No. KK ${num} berhasil disalin!`);
-                      }}
-                      className="px-2.5 py-1 text-[10px] font-extrabold bg-white hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-xl transition-colors cursor-pointer shadow-xs shrink-0"
-                    >
-                      Salin
-                    </button>
-                  </div>
-                ) : null}
-
-                <div className="grid grid-cols-2 gap-2 text-left">
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase">Status Warga</p>
-                    <p className="text-xs font-bold text-slate-800 mt-0.5 truncate">{previewPhotoWarga.status || 'Warga Tetap'}</p>
-                  </div>
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase">Keluarga</p>
-                    <p className="text-xs font-bold text-teal-700 mt-0.5 truncate">
-                      👨‍👩‍👧‍👦 {((previewPhotoWarga.members || []).length) + 1} Jiwa
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tombol Tutup */}
-              <button
-                type="button"
-                onClick={() => setPreviewPhotoWarga(null)}
-                className="w-full mt-4 py-3 bg-teal-600 hover:bg-teal-700 active:scale-98 text-white font-extrabold text-xs rounded-2xl shadow-md transition-all cursor-pointer"
+              <motion.div
+                initial={{ opacity: 0, y: 24, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 24, scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                className="bg-white rounded-t-[1.75rem] sm:rounded-[1.75rem] shadow-2xl w-full max-w-xl max-h-[92dvh] sm:max-h-[88vh] overflow-hidden flex flex-col border border-slate-100"
+                onClick={e => e.stopPropagation()}
               >
-                Tutup Pratinjau Foto
-              </button>
+                <div className="shrink-0 px-4 sm:px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 bg-white">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-12 h-12 rounded-2xl overflow-hidden bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center font-black text-lg shrink-0 border border-teal-100">
+                      {previewPhotoWarga.photo ? (
+                        <img src={previewPhotoWarga.photo} alt={previewPhotoWarga.nama || 'Foto warga'} className="w-full h-full object-cover" />
+                      ) : (previewPhotoWarga.nama || 'W').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-extrabold text-slate-900 text-base sm:text-lg truncate">{previewPhotoWarga.nama || 'Detail Warga'}</h3>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-teal-50 text-teal-800 border border-teal-200">{previewRoleLabel}</span>
+                        {previewOwnAccount && <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Akun Anda</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewPhotoWarga(null)}
+                    className="w-9 h-9 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer shrink-0"
+                    title="Tutup detail"
+                    aria-label="Tutup detail data warga"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4">
+                  <section className="bg-slate-50 rounded-2xl border border-slate-200 p-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">Identitas Warga</p>
+                        <p className="text-sm font-extrabold text-slate-900 mt-0.5">{previewPhotoWarga.nama || '-'}</p>
+                      </div>
+                      <HouseBadge warga={previewPhotoWarga} size="md" />
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      <div className="bg-white rounded-xl border border-slate-100 p-2.5">
+                        <p className="text-[9px] font-bold uppercase text-slate-400">Status Warga</p>
+                        <p className="text-xs font-extrabold text-slate-800 mt-1 break-words">{previewApprovalLabel}</p>
+                      </div>
+                      <div className="bg-white rounded-xl border border-slate-100 p-2.5">
+                        <p className="text-[9px] font-bold uppercase text-slate-400">Jumlah Keluarga</p>
+                        <p className="text-xs font-extrabold text-teal-700 mt-1">{previewMembers.length + 1} Jiwa</p>
+                      </div>
+                      <div className="bg-white rounded-xl border border-slate-100 p-2.5 col-span-2 sm:col-span-1">
+                        <p className="text-[9px] font-bold uppercase text-slate-400">RT / Lingkungan</p>
+                        <p className="text-xs font-extrabold text-slate-800 mt-1">{previewPhotoWarga.rt || 'RT 01'}</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Alamat / Domisili</h4>
+                    <div className="bg-white border border-slate-200 rounded-2xl p-3.5">
+                      <p className="text-sm font-bold text-slate-800 break-words">{previewPhotoWarga.alamat || 'Alamat belum dilengkapi'}</p>
+                      {previewPhotoWarga.alamatKk && canPreviewKk && (
+                        <p className="text-xs text-slate-500 mt-1.5">Alamat asal KK: {previewPhotoWarga.alamatKk}</p>
+                      )}
+                    </div>
+                  </section>
+
+                  {canPreviewPrivateData && (
+                    <section className="space-y-2">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Data Pribadi</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-white border border-slate-200 rounded-xl p-3 min-w-0">
+                          <p className="text-[9px] font-bold uppercase text-slate-400">Username</p>
+                          <p className="text-xs font-bold text-slate-800 mt-1 break-all">{previewPhotoWarga.username ? `@${previewPhotoWarga.username}` : '-'}</p>
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-xl p-3 min-w-0">
+                          <p className="text-[9px] font-bold uppercase text-slate-400">Nomor HP</p>
+                          <p className="text-xs font-bold text-slate-800 mt-1 break-words">{previewPhotoWarga.noHp || '-'}</p>
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-xl p-3 min-w-0">
+                          <p className="text-[9px] font-bold uppercase text-slate-400">Jenis Kelamin</p>
+                          <p className="text-xs font-bold text-slate-800 mt-1">{inferJenisKelamin(previewPhotoWarga.nama || '', 'Kepala Keluarga', previewPhotoWarga.jenisKelamin)}</p>
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-xl p-3 min-w-0">
+                          <p className="text-[9px] font-bold uppercase text-slate-400">Usia</p>
+                          <p className="text-xs font-bold text-slate-800 mt-1">{previewAge >= 0 ? `${previewAge} tahun` : '-'}</p>
+                        </div>
+                        <div className="bg-white border border-slate-200 rounded-xl p-3 min-w-0 col-span-2">
+                          <p className="text-[9px] font-bold uppercase text-slate-400">Tanggal Lahir</p>
+                          <p className="text-xs font-bold text-slate-800 mt-1">{formatTanggalLahirWarga(previewPhotoWarga.tglLahir, previewAge >= 0 ? previewAge : undefined)}</p>
+                        </div>
+                      </div>
+                    </section>
+                  )}
+
+                  {canPreviewKk && (
+                    <section className="space-y-2">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Informasi Kartu Keluarga</h4>
+                      <div className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl p-3.5">
+                        <p className="text-[9px] font-extrabold text-teal-700 uppercase tracking-wider">Nomor Kartu Keluarga</p>
+                        <div className="flex items-center justify-between gap-2 mt-1">
+                          <p className="font-mono font-black text-sm text-teal-950 tracking-wider break-all">{previewNoKk || 'Belum tersedia'}</p>
+                          {previewNoKk && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard?.writeText(previewNoKk);
+                                showStatusBanner('Nomor KK berhasil disalin!');
+                              }}
+                              className="shrink-0 px-2.5 py-1.5 rounded-lg bg-white border border-teal-200 text-teal-700 text-[10px] font-extrabold hover:bg-teal-100 cursor-pointer"
+                            >Salin</button>
+                          )}
+                        </div>
+                        {previewPhotoWarga.hasKk && (
+                          <p className="text-[10px] text-teal-800 mt-2">Dokumen KK sudah diunggah.</p>
+                        )}
+                        {previewPhotoWarga.kkWilayah && (
+                          <p className="text-[10px] text-teal-800 mt-1">Wilayah asal: {previewPhotoWarga.kkWilayah}</p>
+                        )}
+                      </div>
+                    </section>
+                  )}
+
+                  {canPreviewFamily && (
+                    <section className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Data Anggota Keluarga</h4>
+                        <span className="text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-100 rounded-full px-2 py-1">{previewMembers.length} Anggota</span>
+                      </div>
+                      {previewMembers.length > 0 ? (
+                        <div className="space-y-2">
+                          {previewMembers.map((member: any, index: number) => {
+                            const memberAge = resolvePersonAge(member.age, member.tglLahir);
+                            return (
+                              <div key={member.id || member._id || `${member.name || 'anggota'}-${index}`} className="bg-white border border-slate-200 rounded-xl p-3 flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-xs font-extrabold text-slate-800 break-words">{member.name || 'Anggota keluarga'}</p>
+                                  <p className="text-[10px] font-semibold text-slate-500 mt-0.5">{member.role || 'Anggota keluarga'}</p>
+                                  {member.tglLahir && <p className="text-[10px] text-slate-500 mt-1">Lahir: {formatTanggalLahirWarga(member.tglLahir, memberAge >= 0 ? memberAge : undefined)}</p>}
+                                </div>
+                                <span className="shrink-0 text-[10px] font-extrabold bg-teal-50 text-teal-700 border border-teal-100 rounded-lg px-2 py-1">{memberAge >= 0 ? `${memberAge} th` : 'Usia -'}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-4 text-center text-xs font-medium text-slate-500">Belum ada anggota keluarga yang tercatat.</div>
+                      )}
+                    </section>
+                  )}
+
+                  <section className="space-y-2">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Dokumen Kependudukan</h4>
+                    <div className="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-extrabold text-slate-800">{previewDocumentList.length > 0 ? `${previewDocumentList.length} dokumen tersedia` : 'Belum ada dokumen yang diunggah'}</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">{previewPhotoWarga.hasKk || previewPhotoWarga.dokumenKk ? 'KK tersedia' : 'KK belum tersedia'} · {previewKtpFiles.length > 0 ? `${previewKtpFiles.length} KTP tersedia` : 'KTP belum tersedia'}</p>
+                      </div>
+                      {canPreviewDocuments && previewDocumentList.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPreviewPhotoWarga(null);
+                            setPreviewDocs({ docs: previewDocumentList, currentIndex: 0, wargaName: previewPhotoWarga.nama || 'Warga' });
+                          }}
+                          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-[10px] font-extrabold transition-colors cursor-pointer"
+                        >
+                          <icons.eye className="w-3.5 h-3.5" /> Lihat Dokumen
+                        </button>
+                      )}
+                    </div>
+                  </section>
+
+                  {!canPreviewPrivateData && !canPreviewFamily && (
+                    <p className="text-[10px] leading-relaxed text-slate-400 bg-slate-50 rounded-xl p-3 border border-slate-100">
+                      Informasi nomor telepon, tanggal lahir, nomor KK, dan rincian anggota keluarga hanya dapat dilihat oleh pemilik akun atau pengurus yang memiliki wewenang.
+                    </p>
+                  )}
+                </div>
+
+                <div className="shrink-0 border-t border-slate-100 bg-white p-3 sm:p-4 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewPhotoWarga(null)}
+                    className="w-full py-3 bg-teal-600 hover:bg-teal-700 active:scale-[0.99] text-white font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer"
+                  >
+                    Tutup Detail
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
-          </div>
-        )}
+          );
+        })()}
       </AnimatePresence>
 
       {/* Document Preview Modal */}
