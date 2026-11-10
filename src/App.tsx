@@ -319,7 +319,7 @@ const WebSidebar = ({
   <motion.aside 
     animate={{ width: isCollapsed ? '5rem' : '16rem' }}
     transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-    className="h-screen bg-white border-r border-gray-100 flex flex-col p-4 lg:p-6 fixed left-0 top-0 z-50 overflow-hidden shadow-sm"
+    className="gr-desktop-sidebar h-screen bg-white border-r border-gray-100 flex flex-col p-4 lg:p-6 fixed left-0 top-0 z-50 overflow-hidden shadow-sm"
   >
     <div className="flex items-center mb-10 gap-2.5 justify-start">
       <div className="bg-gradient-to-br from-teal-500 to-emerald-600 p-1.5 rounded-xl shadow-sm border border-teal-400/30 shrink-0">
@@ -334,8 +334,8 @@ const WebSidebar = ({
             transition={{ duration: 0.15 }}
             className="flex flex-col whitespace-nowrap"
           >
-            <span className="text-base font-extrabold leading-none tracking-tight text-gray-800" style={{ fontFamily: fontStyle }}>
-              GUYUB <span className="text-teal-600">RUKUN</span>
+            <span className="gr-sidebar-brand-name text-base font-extrabold leading-none tracking-tight text-gray-800" style={{ fontFamily: fontStyle }}>
+              GUYUB <span>RUKUN</span>
             </span>
             <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Aplikasi Warga</span>
           </motion.div>
@@ -369,7 +369,7 @@ const WebSidebar = ({
              key={item.name} 
              onClick={() => onTabChange(item.name)}
              title={item.name}
-             className={`w-full flex items-center justify-start gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${isActive ? 'bg-teal-50 text-teal-800' : 'text-gray-600 hover:bg-gray-50'}`}
+             className={`gr-sidebar-item w-full flex items-center justify-start gap-3 p-3 rounded-xl text-sm font-medium transition-colors ${isActive ? 'is-active bg-teal-50 text-teal-800' : 'text-gray-600 hover:bg-gray-50'}`}
            >
              <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-teal-600' : 'text-gray-400'}`} />
              <AnimatePresence mode="popLayout">
@@ -437,7 +437,7 @@ const WebHeader = ({
 
   return (
     <>
-      <header className={`sticky top-0 z-40 bg-white/70 backdrop-blur-xl border-b border-gray-100/50 shadow-sm transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-20 lg:ml-[16rem]'}`}>
+      <header className={`gr-desktop-header sticky top-0 z-40 bg-white/70 backdrop-blur-xl border-b border-gray-100/50 shadow-sm transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-20 lg:ml-[16rem]'}`}>
         <div className="flex items-center justify-between py-3 px-6 lg:px-8">
           <div className="flex items-center gap-4">
             {/* Toggle Button for Sidebar */}
@@ -2462,7 +2462,7 @@ const MobileSaldoCard = ({ user }: { user?: any }) => {
 
   return (
     <section className="px-5 mb-6 mt-0">
-      <div className="bg-[#0eb18a] bg-gradient-to-br from-[#10b981] to-[#0eb18a] rounded-[1.5rem] p-5 text-white shadow-xl shadow-teal-500/20 relative overflow-hidden">
+      <div className="gr-mobile-balance bg-[#0eb18a] bg-gradient-to-br from-[#10b981] to-[#0eb18a] rounded-[1.5rem] p-5 text-white shadow-xl shadow-teal-500/20 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-36 h-36 bg-white opacity-10 rounded-full translate-x-12 -translate-y-8"></div>
           <div className="absolute bottom-0 right-0 w-24 h-24 bg-white opacity-[0.05] rounded-full translate-x-8 translate-y-8 blur-md"></div>
           
@@ -3340,7 +3340,7 @@ const MobileProfilPage = ({ user, onLogout, onUpdateUser }: { user: any; onLogou
     const activeEditPhoto = photoPreview !== null ? photoPreview : profile.photo;
 
     return (
-      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="p-5 pb-32 min-h-screen bg-slate-50 w-full relative">
+      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="gr-profile-edit-page relative mx-auto min-h-screen w-full max-w-2xl bg-[#f5faf9] p-4 pb-32 sm:p-5">
         <div className="flex items-center justify-between mb-6">
           <button onClick={handleCancelEdit} className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-600 hover:bg-slate-50 transition-colors shadow-sm" title="Batal & Kembali">
             <icons.arrowLeft className="w-5 h-5" />
@@ -3672,13 +3672,13 @@ const MobileProfilPage = ({ user, onLogout, onUpdateUser }: { user: any; onLogou
 
   // ================= VIEW: PROFIL UTAMA =================
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col w-full min-h-screen bg-slate-50 pb-28">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="gr-profile-page relative isolate flex min-h-screen w-full flex-col overflow-hidden bg-[#f5faf9] pb-28">
       
       {/* Absolute Header Background */}
-      <div className="absolute top-0 left-0 right-0 h-[280px] bg-gradient-to-b from-[#13b097] to-[#0b7c5e] rounded-b-[3rem] shadow-md overflow-hidden">
+      <div className="gr-profile-hero-bg absolute left-0 right-0 top-0 h-[292px] overflow-hidden rounded-b-[2.6rem] bg-gradient-to-br from-teal-700 via-teal-600 to-emerald-600 shadow-lg">
       </div>
 
-      <div className="relative z-10 px-5 pt-12 flex flex-col items-center">
+      <div className="gr-profile-identity relative z-10 mx-auto flex w-full max-w-2xl flex-col items-center px-5 pt-10 sm:pt-12">
         {/* Sukses Alert Dinamis */}
         <AnimatePresence>
           {successMsg && (
@@ -3690,7 +3690,7 @@ const MobileProfilPage = ({ user, onLogout, onUpdateUser }: { user: any; onLogou
 
         {/* Profil Avatar (Hero) */}
         <div className="relative">
-          <div className="w-[110px] h-[110px] rounded-full border-4 border-white shadow-[0_8px_16px_rgba(0,0,0,0.15)] overflow-hidden bg-[#e9ebed] flex items-center justify-center">
+          <div className="h-[112px] w-[112px] overflow-hidden rounded-full border-[5px] border-white bg-[#e9ebed] shadow-[0_12px_28px_rgba(4,48,47,0.24)] ring-4 ring-white/15 flex items-center justify-center">
              {profile.photo ? (
                 <img src={profile.photo} alt="Profile" className="w-full h-full object-cover" />
              ) : (
@@ -3703,8 +3703,9 @@ const MobileProfilPage = ({ user, onLogout, onUpdateUser }: { user: any; onLogou
         </div>
 
         {/* Info Singkat */}
-        <div className="text-center mt-4 text-white">
-          <h2 className="text-[22px] font-bold tracking-tight drop-shadow-sm">{profile.name}</h2>
+        <div className="mt-4 text-center text-white">
+          <p className="mb-1 text-[9px] font-extrabold uppercase tracking-[0.2em] text-teal-100">Profil Warga</p>
+          <h2 className="text-[23px] font-black tracking-tight text-white drop-shadow-sm">{profile.name}</h2>
           <div className="inline-flex items-center gap-1.5 mt-2 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 shadow-sm">
              <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
              <span className="text-xs font-bold uppercase tracking-wider">
@@ -3723,10 +3724,10 @@ const MobileProfilPage = ({ user, onLogout, onUpdateUser }: { user: any; onLogou
       </div>
 
       {/* Konten Data Profil (Kartu Melayang) */}
-      <div className="relative z-10 px-5 w-full mt-8">
+      <div className="relative z-10 mx-auto mt-7 w-full max-w-2xl px-4 sm:px-5">
         
         {/* KARTU WARGA DIGITAL PREMIUM WITH QR CODE & SHARE SHORTCUT */}
-        <div className="mb-6 bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 p-6 rounded-3xl shadow-xl relative overflow-hidden text-white border border-slate-700/50">
+        <div className="gr-profile-digital-card relative mb-5 overflow-hidden rounded-[26px] border border-teal-700/30 bg-gradient-to-br from-[#075e59] via-[#087c71] to-[#0f766e] p-5 text-white shadow-[0_16px_34px_rgba(8,112,101,0.22)] sm:p-6">
           {/* Subtle design shapes */}
           <div className="absolute top-0 right-0 w-40 h-40 bg-teal-500/10 rounded-full translate-x-12 -translate-y-12 blur-2xl"></div>
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/10 rounded-full -translate-x-12 translate-y-12 blur-2xl"></div>
@@ -3795,7 +3796,7 @@ const MobileProfilPage = ({ user, onLogout, onUpdateUser }: { user: any; onLogou
         </div>
 
         {/* Tombol Aksi Cepat */}
-        <div className="flex gap-3 mb-6">
+        <div className="mb-5 grid grid-cols-2 gap-3">
            <button onClick={() => setIsEditing(true)} className="flex-1 py-3.5 bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] text-teal-600 font-extrabold text-sm flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors border border-slate-100">
              <icons.edit className="w-4 h-4"/> Edit Profil
            </button>
@@ -3806,8 +3807,8 @@ const MobileProfilPage = ({ user, onLogout, onUpdateUser }: { user: any; onLogou
         </div>
 
         {/* Kartu Data Keluarga & Domisili KK */}
-        <section className="mb-6 bg-white rounded-3xl border border-teal-100 shadow-[0_8px_30px_rgba(13,148,136,0.07)] overflow-hidden" aria-labelledby="profile-family-heading">
-          <div className="p-4 sm:p-5 bg-gradient-to-r from-teal-50 via-white to-emerald-50 border-b border-teal-100 flex items-center justify-between gap-3">
+        <section className="gr-profile-section mb-5 overflow-hidden rounded-[26px] border border-[#dcefeb] bg-white shadow-[0_8px_28px_rgba(15,68,65,0.06)]" aria-labelledby="profile-family-heading">
+          <div className="flex items-center justify-between gap-3 border-b border-teal-100 bg-gradient-to-r from-[#effcf8] via-white to-[#eefaf5] p-4 sm:p-5">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-11 h-11 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-sm">
                 <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -3916,7 +3917,7 @@ const MobileProfilPage = ({ user, onLogout, onUpdateUser }: { user: any; onLogou
         </section>
 
         {/* Kartu Informasi Lengkap */}
-        <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-100 overflow-hidden divide-y divide-slate-50">
+        <div className="gr-profile-info-card divide-y divide-[#edf4f2] overflow-hidden rounded-[26px] border border-[#e3efec] bg-white shadow-[0_8px_28px_rgba(15,68,65,0.055)]">
           {/* Row Username dengan Status 1x Ubah */}
           <div className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
             <div className="flex items-center gap-4 min-w-0">
@@ -3997,7 +3998,7 @@ const MobileProfilPage = ({ user, onLogout, onUpdateUser }: { user: any; onLogou
         </div>
 
         {/* Tombol Logout */}
-        <button onClick={onLogout} className="w-full mt-6 py-4 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-2xl text-sm font-extrabold transition-colors shadow-sm flex justify-center items-center gap-2">
+        <button onClick={onLogout} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-white py-4 text-sm font-extrabold text-rose-600 shadow-sm transition-colors hover:bg-rose-50">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
           Keluar Aplikasi
         </button>
@@ -5139,7 +5140,7 @@ function MainApp({ user: originalUser, onLogout, onUpdateUser }: { user: any; on
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50" style={{ fontFamily: fontStyle }}>
+    <div className="gr-app-shell flex h-screen overflow-hidden bg-slate-50" style={{ fontFamily: fontStyle }}>
       
       {!isMobile && (
         <div className="fixed inset-0 z-0 opacity-[0.03] flex items-center justify-center p-20 pointer-events-none md:flex hidden">
@@ -5149,7 +5150,7 @@ function MainApp({ user: originalUser, onLogout, onUpdateUser }: { user: any; on
 
       {/* --- DESKTOP ADMIN VIEW --- */}
       {!isMobile ? (
-      <div className="hidden md:flex relative z-10 w-full h-full">
+      <div className="gr-desktop-layout hidden md:flex relative z-10 w-full h-full">
         <WebSidebar activeTab={activeWebTab} onTabChange={setActiveWebTab} visibleMenus={visibleMenus} isCollapsed={sidebarCollapsed} />
         <div className="flex flex-col flex-grow w-full h-full overflow-hidden">
           <WebHeader 
@@ -5173,15 +5174,16 @@ function MainApp({ user: originalUser, onLogout, onUpdateUser }: { user: any; on
                }
             }}
           />
-          <main className={`flex-grow p-4 lg:p-8 overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-20 lg:ml-[16rem]'}`} style={{ backgroundColor: themeColors.neutral.bg }}>
+          <main className={`gr-desktop-main flex-grow p-4 lg:p-8 overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-20 lg:ml-[16rem]'}`} style={{ backgroundColor: themeColors.neutral.bg }}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeWebTab}
+                data-ui-module={activeWebTab}
+                className="gr-desktop-module w-full h-full"
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -5 }}
                 transition={{ duration: 0.15, ease: "easeOut" }}
-                className="w-full h-full"
               >
                 {!user.isApproved ? (
                   <div className="flex flex-col items-center justify-center p-12 mt-20 text-center bg-white rounded-2xl shadow-sm border border-gray-100 max-w-lg mx-auto">
@@ -5238,11 +5240,12 @@ function MainApp({ user: originalUser, onLogout, onUpdateUser }: { user: any; on
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={activeMobileTab}
+              data-ui-module={activeMobileTab}
               initial={activeMobileTab === 'Profil' ? { opacity: 0, y: "100%" } : { opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0, y: 0 }}
               exit={activeMobileTab === 'Profil' ? { opacity: 0, y: "100%" } : { opacity: 0, x: -20 }}
               transition={{ duration: 0.15, ease: "easeOut" }}
-              className="gr-mobile-page-scroll h-full overflow-y-auto pb-24 relative"
+              className="gr-mobile-module gr-mobile-page-scroll h-full overflow-y-auto pb-24 relative"
             >
               {activeMobileTab === 'Profil' ? (
                 <MobileProfilPage user={user} onLogout={onLogout} onUpdateUser={onUpdateUser} />
