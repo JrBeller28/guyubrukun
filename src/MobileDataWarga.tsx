@@ -2691,11 +2691,20 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
         </motion.div>
       ) : (
         <>
-          <h2 className="mobile-data-warga-title text-xl sm:text-2xl font-extrabold text-slate-900 mb-4 tracking-tight">Direktori Warga & Pengurus</h2>
+          <div className="gr-warga-page-intro mb-5">
+            <div className="gr-warga-page-intro-icon" aria-hidden="true">
+              <icons.warga className="h-6 w-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="gr-warga-page-eyebrow">PUSAT DATA RT</p>
+              <h2 className="mobile-data-warga-title">Direktori Warga & Pengurus</h2>
+              <p className="gr-warga-page-description">Kelola data kepala keluarga, profil penduduk, dan informasi keluarga dalam satu tempat.</p>
+            </div>
+          </div>
 
           {/* DATA WUS & PUS BKKBN KHUSUS KETUA RT DAN SEKRETARIS */}
           {canViewBkkbnData && (
-            <section className="mb-6 w-full min-w-0 rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4 sm:p-5 lg:p-6 shadow-sm">
+            <section className="gr-warga-bkkbn-panel mb-6 w-full min-w-0 rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4 sm:p-5 lg:p-6 shadow-sm">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="text-xs font-black uppercase tracking-wider text-emerald-900">Pendataan Keluarga Berencana</p>
@@ -2706,7 +2715,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
-                <button type="button" onClick={() => setSelectedBkkbnCategory(current => current === 'wus' ? null : 'wus')} className={`rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${selectedBkkbnCategory === 'wus' ? 'border-fuchsia-400 bg-fuchsia-50 ring-2 ring-fuchsia-200' : 'border-fuchsia-100 bg-white'}`}>
+                <button type="button" onClick={() => setSelectedBkkbnCategory(current => current === 'wus' ? null : 'wus')} className={`gr-warga-metric-card gr-warga-metric-wus rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${selectedBkkbnCategory === 'wus' ? 'border-fuchsia-400 bg-fuchsia-50 ring-2 ring-fuchsia-200' : 'border-fuchsia-100 bg-white'}`}>
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <p className="text-[11px] font-black uppercase tracking-wider text-fuchsia-700">WUS</p>
@@ -2721,7 +2730,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                   </div>
                 </button>
 
-                <button type="button" onClick={() => setSelectedBkkbnCategory(current => current === 'pus' ? null : 'pus')} className={`rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${selectedBkkbnCategory === 'pus' ? 'border-teal-400 bg-teal-50 ring-2 ring-teal-200' : 'border-teal-100 bg-white'}`}>
+                <button type="button" onClick={() => setSelectedBkkbnCategory(current => current === 'pus' ? null : 'pus')} className={`gr-warga-metric-card gr-warga-metric-pus rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${selectedBkkbnCategory === 'pus' ? 'border-teal-400 bg-teal-50 ring-2 ring-teal-200' : 'border-teal-100 bg-white'}`}>
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <p className="text-[11px] font-black uppercase tracking-wider text-teal-700">PUS</p>
@@ -2889,7 +2898,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
 
           {/* PANEL SERAH-TERIMA ROLE KETUA RT - HANYA SATU KALI PER RT */}
           {canManageKetuaRtTransfer && (
-            <section className="mb-6 rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-4 sm:p-5 shadow-sm">
+            <section className="gr-warga-transfer-panel mb-6 rounded-3xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-4 sm:p-5 shadow-sm">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-[10px] font-black uppercase tracking-wider text-amber-800">Pengelolaan Jabatan RT</p>
@@ -2908,7 +2917,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
           {/* STATS CARDS & BAR CHART (KHUSUS ROLE SELAIN WARGA, PENGURUS, DAN BENDAHARA) */}
           {canViewDemografiUsia && (
             <>
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-5 shadow-xs mb-6">
+              <div className="gr-warga-demography-panel bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-5 shadow-xs mb-6">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="flex items-center gap-1.5">
@@ -3384,7 +3393,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
           )}
 
           {/* SEARCH & FILTER WARGA */}
-          <div className="mobile-data-warga-toolbar mb-5 space-y-3">
+          <div className="gr-warga-search-panel mobile-data-warga-toolbar mb-5 space-y-3">
             <div className="mobile-data-warga-filter-row flex flex-col sm:flex-row gap-2.5">
               <div className="relative flex-grow">
                 <icons.search className="w-5 h-5 text-gray-400 absolute left-3 top-3" />
@@ -3496,7 +3505,15 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
           </div>
 
           {/* LIST WARGA */}
-          <div className="mobile-warga-list space-y-3 sm:space-y-4">
+          <div className="gr-warga-list-heading">
+            <div>
+              <p className="gr-warga-list-eyebrow">DATA PENDUDUK</p>
+              <h3>Daftar Kepala Keluarga</h3>
+              <p>Gunakan pencarian atau filter blok untuk menemukan data warga.</p>
+            </div>
+            <span className="gr-warga-list-count">{filteredWargaData.length} KK ditampilkan</span>
+          </div>
+          <div className="mobile-warga-list gr-warga-directory-grid space-y-3 sm:space-y-4">
             {filteredWargaData.map((warga, idx) => {
               const members = Array.isArray(warga.members) ? warga.members : [];
               const isCurrentUser = isOwnAccount(warga);
