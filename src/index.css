@@ -642,3 +642,2095 @@ button {
     padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+
+/* ==========================================================================
+   GUYUB RUKUN — ELEGANT COMMUNITY DESIGN SYSTEM
+   Visual-only layer. Existing state, routes, API calls and data rules remain
+   owned by the original components.
+   ========================================================================== */
+:root {
+  /* Original Guyub Rukun teal / emerald brand palette. */
+  --gr-brand: #0d9488;
+  --gr-brand-strong: #0f766e;
+  --gr-ink: #122b35;
+  --gr-ink-soft: #1e4350;
+  --gr-muted: #64748b;
+  --gr-line: #e5efed;
+  --gr-canvas: #f5faf9;
+  --gr-surface: #ffffff;
+  --gr-soft: #effcf8;
+  --gr-radius-sm: 12px;
+  --gr-radius-md: 18px;
+  --gr-radius-lg: 24px;
+  --gr-shadow-card: 0 8px 28px rgba(15, 68, 65, 0.055);
+  --gr-shadow-float: 0 14px 38px rgba(15, 68, 65, 0.12);
+  color-scheme: light;
+}
+
+html,
+body {
+  background: var(--gr-canvas);
+  color: var(--gr-ink);
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  letter-spacing: -0.012em;
+}
+
+::selection {
+  color: var(--gr-ink);
+  background: rgba(13, 148, 136, 0.16);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(13, 148, 136, 0.28);
+  outline-offset: 2px;
+}
+
+/* Keep the original teal / emerald brand mapping. Semantic status colors
+   (success, warning, danger and information) remain distinct. */
+.text-teal-800,
+.text-teal-700,
+.text-teal-600 {
+  color: var(--gr-brand-strong) !important;
+}
+
+.bg-teal-50,
+.bg-teal-100 {
+  background-color: #effcf8 !important;
+}
+
+.border-teal-50,
+.border-teal-100,
+.border-teal-200 {
+  border-color: #d5eee8 !important;
+}
+
+.bg-teal-600,
+.hover\:bg-teal-700:hover {
+  background-color: var(--gr-brand) !important;
+  color: #fff !important;
+}
+
+.bg-gradient-to-br.from-teal-500,
+.bg-gradient-to-br.from-teal-600,
+.bg-gradient-to-br.from-emerald-500,
+.bg-gradient-to-br.from-\[\#10b981\] {
+  background: linear-gradient(135deg, #10b981 0%, #0d9488 100%) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Desktop shell, navigation and workspace
+   -------------------------------------------------------------------------- */
+.gr-app-shell {
+  background: var(--gr-canvas) !important;
+  color: var(--gr-ink);
+}
+
+.gr-desktop-layout {
+  background: var(--gr-canvas);
+}
+
+.gr-desktop-sidebar {
+  background: #ffffff !important;
+  color: var(--gr-ink);
+  border-right: 1px solid var(--gr-line) !important;
+  box-shadow: 8px 0 28px rgba(15, 68, 65, 0.045) !important;
+  padding: 22px 16px !important;
+}
+.gr-desktop-sidebar > div:first-child {
+  min-height: 48px;
+  margin-bottom: 30px !important;
+  padding-inline: 4px;
+}
+
+.gr-desktop-sidebar > div:first-child > div:first-child {
+  background: linear-gradient(135deg, #10b981 0%, #0d9488 100%) !important;
+  border: 0 !important;
+  border-radius: 15px !important;
+  box-shadow: none !important;
+}
+
+.gr-desktop-sidebar > div:first-child span:first-child {
+  color: #fff !important;
+}
+
+.gr-desktop-sidebar > div:first-child span:first-child span {
+  color: #d1fae5 !important;
+}
+
+.gr-desktop-sidebar > div:first-child span:last-child {
+  color: var(--gr-muted) !important;
+}
+
+.gr-desktop-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 5px !important;
+  padding-right: 2px;
+}
+
+.gr-desktop-sidebar .gr-sidebar-item {
+  min-height: 44px;
+  padding: 10px 12px !important;
+  border: 1px solid transparent;
+  border-radius: 13px !important;
+  color: #526672 !important;
+  background: transparent !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.gr-desktop-sidebar .gr-sidebar-item svg {
+  color: #8ca19f !important;
+  transition: color 160ms ease;
+}
+
+.gr-desktop-sidebar .gr-sidebar-item:hover {
+  color: var(--gr-brand-strong) !important;
+  background: #f5faf9 !important;
+}
+
+.gr-desktop-sidebar .gr-sidebar-item:hover svg {
+  color: var(--gr-brand) !important;
+}
+
+.gr-desktop-sidebar .gr-sidebar-item.is-active {
+  color: var(--gr-brand-strong) !important;
+  background: #effcf8 !important;
+  border-color: #d5eee8 !important;
+  box-shadow: 0 5px 16px rgba(13, 148, 136, 0.08);
+  font-weight: 800 !important;
+}
+
+.gr-desktop-sidebar .gr-sidebar-item.is-active svg {
+  color: var(--gr-brand) !important;
+}
+
+.gr-desktop-sidebar > div:last-child {
+  display: none !important;
+}
+
+.gr-desktop-header {
+  min-height: 78px;
+  background: rgba(245, 250, 249, 0.94) !important;
+  border-bottom: 1px solid rgba(13, 148, 136, 0.09) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+.gr-desktop-header > div {
+  min-height: 78px;
+  padding-inline: clamp(20px, 3vw, 42px) !important;
+}
+
+.gr-desktop-header h1 {
+  color: var(--gr-ink) !important;
+  font-size: clamp(19px, 1.7vw, 24px) !important;
+  letter-spacing: -0.045em !important;
+  line-height: 1.15;
+}
+
+.gr-desktop-header h1 span {
+  color: var(--gr-brand) !important;
+}
+
+.gr-desktop-header p {
+  color: var(--gr-muted) !important;
+  font-size: 11px !important;
+}
+
+.gr-desktop-header button {
+  box-shadow: none !important;
+}
+
+.gr-desktop-main {
+  background: var(--gr-canvas) !important;
+  padding: clamp(20px, 2.5vw, 36px) !important;
+  scrollbar-color: #bddbd5 transparent;
+  scrollbar-width: thin;
+}
+
+.gr-desktop-main > div {
+  max-width: 1600px;
+  margin-inline: auto;
+}
+
+.gr-desktop-main h1,
+.gr-desktop-main h2,
+.gr-desktop-main h3,
+.gr-desktop-main h4 {
+  color: var(--gr-ink);
+  letter-spacing: -0.035em;
+}
+
+.gr-desktop-main h1 {
+  font-size: clamp(23px, 2vw, 30px);
+  font-weight: 800;
+}
+
+.gr-desktop-main h2 {
+  font-size: clamp(18px, 1.5vw, 22px);
+  font-weight: 800;
+}
+
+.gr-desktop-main h3 {
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.gr-desktop-main p {
+  line-height: 1.55;
+}
+
+.gr-desktop-main [class*="rounded-2xl"][class*="bg-white"],
+.gr-desktop-main [class*="rounded-3xl"][class*="bg-white"],
+.gr-desktop-main [class*="rounded-xl"][class*="bg-white"] {
+  border-color: var(--gr-line);
+}
+
+.gr-desktop-main [class*="shadow-sm"],
+.gr-desktop-main [class*="shadow-md"],
+.gr-desktop-main [class*="shadow-lg"] {
+  box-shadow: var(--gr-shadow-card) !important;
+}
+
+.gr-desktop-main button {
+  border-radius: 12px;
+  transition: background-color 150ms ease, border-color 150ms ease,
+              color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.gr-desktop-main button:active {
+  transform: translateY(1px);
+}
+
+.gr-desktop-main input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]),
+.gr-desktop-main select,
+.gr-desktop-main textarea {
+  min-height: 42px;
+  border: 1px solid var(--gr-line) !important;
+  border-radius: 12px !important;
+  background: #fff !important;
+  color: var(--gr-ink) !important;
+  box-shadow: none !important;
+  padding-inline: 12px;
+  font-size: 13px;
+}
+
+.gr-desktop-main textarea {
+  padding-block: 11px;
+}
+
+.gr-desktop-main input::placeholder,
+.gr-desktop-main textarea::placeholder {
+  color: #94a3a7;
+}
+
+.gr-desktop-main input:focus,
+.gr-desktop-main select:focus,
+.gr-desktop-main textarea:focus {
+  border-color: var(--gr-brand) !important;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.14) !important;
+  outline: none !important;
+}
+
+.gr-desktop-main table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  font-size: 12px;
+}
+
+.gr-desktop-main thead th {
+  padding: 13px 14px;
+  background: #f0f8f6;
+  color: #52716f;
+  border-bottom: 1px solid var(--gr-line);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.055em;
+  white-space: nowrap;
+}
+
+.gr-desktop-main tbody td {
+  padding: 13px 14px;
+  border-bottom: 1px solid #edf4f2;
+  color: #38515a;
+  vertical-align: middle;
+}
+
+.gr-desktop-main tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.gr-desktop-main tbody tr:hover {
+  background: #f8fcfb;
+}
+
+.gr-desktop-main .overflow-x-auto {
+  border-radius: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #bddbd5 transparent;
+}
+
+/* --------------------------------------------------------------------------
+   Mobile application shell
+   -------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  html,
+  body,
+  #root {
+    background: var(--gr-canvas) !important;
+  }
+
+  .gr-mobile-app {
+    background: var(--gr-canvas) !important;
+  }
+
+  .gr-mobile-header {
+    min-height: 66px;
+    padding: max(10px, env(safe-area-inset-top)) 18px 10px !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    border-bottom: 1px solid var(--gr-line) !important;
+    box-shadow: none !important;
+  }
+
+  .gr-mobile-header .bg-gradient-to-br {
+    background: linear-gradient(135deg, #10b981 0%, #0d9488 100%) !important;
+    border: 0 !important;
+    border-radius: 13px !important;
+    box-shadow: none !important;
+  }
+
+  .gr-mobile-header button {
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--gr-line) !important;
+    border-radius: 50% !important;
+    background: #f5faf9 !important;
+    box-shadow: none !important;
+  }
+
+  .gr-mobile-profile {
+    position: relative;
+    margin: 12px 14px 16px !important;
+    min-height: 98px;
+    padding: 16px 17px !important;
+    border: 1px solid var(--gr-line) !important;
+    border-radius: 22px !important;
+    background: #fff !important;
+    box-shadow: var(--gr-shadow-card) !important;
+  }
+
+  .gr-mobile-profile > .absolute {
+    display: none !important;
+  }
+
+  .gr-mobile-profile h2 {
+    color: var(--gr-ink) !important;
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.045em !important;
+  }
+
+  .gr-mobile-profile p {
+    color: var(--gr-muted) !important;
+    font-size: 11px !important;
+  }
+
+  .gr-mobile-profile .gr-profile-link {
+    margin-top: 8px;
+    padding: 4px 9px;
+    border: 0 !important;
+    background: #effcf8 !important;
+    color: var(--gr-brand-strong) !important;
+    box-shadow: none !important;
+    font-size: 10px !important;
+  }
+
+  .gr-mobile-profile img,
+  .gr-mobile-profile > div > div {
+    border-color: #e5efed !important;
+  }
+
+  .gr-mobile-page-scroll {
+    background: var(--gr-canvas) !important;
+    padding: 0 0 calc(110px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .gr-mobile-balance {
+    margin: 0 14px 20px;
+    min-height: 148px;
+    padding: 19px 19px 17px !important;
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    border-radius: 24px !important;
+    background: linear-gradient(135deg, #10b981 0%, #0d9488 100%) !important;
+    background-image: linear-gradient(135deg, #10b981 0%, #0d9488 100%) !important;
+    box-shadow: 0 12px 26px rgba(13, 148, 136, 0.18) !important;
+  }
+
+  .gr-mobile-balance > .absolute {
+    display: none !important;
+  }
+
+  .gr-mobile-balance p {
+    color: rgba(255, 255, 255, 0.82) !important;
+    font-size: 10px !important;
+    letter-spacing: 0.08em !important;
+  }
+
+  .gr-mobile-balance h3 {
+    color: #fff !important;
+    font-size: clamp(26px, 7vw, 32px) !important;
+    letter-spacing: -0.055em !important;
+  }
+
+  .gr-mobile-balance button {
+    color: #ffffff !important;
+  }
+
+  .gr-mobile-balance span {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.11) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 9px !important;
+  }
+
+  .gr-quick-actions {
+    padding-inline: 14px !important;
+    margin-bottom: 22px !important;
+  }
+
+  .gr-quick-actions > div:first-child h3 {
+    color: var(--gr-ink) !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.035em !important;
+  }
+
+  .gr-quick-actions > div:first-child span {
+    color: var(--gr-brand-strong) !important;
+    background: #effcf8 !important;
+  }
+
+  .gr-quick-actions-card {
+    padding: 17px 11px !important;
+    border: 1px solid var(--gr-line) !important;
+    border-radius: 22px !important;
+    background: #fff !important;
+    box-shadow: var(--gr-shadow-card) !important;
+  }
+
+  .gr-quick-grid {
+    gap: 17px 5px !important;
+  }
+
+  .gr-quick-action {
+    gap: 8px !important;
+    min-height: 75px;
+  }
+
+  .gr-quick-action > div:first-child {
+    width: 48px !important;
+    height: 48px !important;
+    padding: 11px !important;
+    border: 1px solid #e0efeb;
+    border-radius: 16px !important;
+    background: #effcf8 !important;
+    background-image: none !important;
+    color: var(--gr-brand-strong) !important;
+    box-shadow: none !important;
+  }
+
+  .gr-quick-action > div:first-child svg {
+    color: var(--gr-brand-strong) !important;
+    filter: none !important;
+  }
+
+  .gr-quick-action:active > div:first-child {
+    background: var(--gr-brand) !important;
+    border-color: var(--gr-brand) !important;
+  }
+
+  .gr-quick-action > span {
+    color: #526672 !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.015em;
+  }
+
+  .gr-mobile-bottom-nav {
+    left: 14px !important;
+    right: 14px !important;
+    bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    min-height: 66px !important;
+    padding: 7px !important;
+    gap: 5px !important;
+    border: 1px solid rgba(220, 235, 232, 0.96) !important;
+    border-radius: 23px !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    box-shadow: 0 12px 30px rgba(15, 68, 65, 0.12) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    backdrop-filter: blur(20px) saturate(140%);
+  }
+
+  .gr-mobile-nav-item {
+    min-height: 50px !important;
+    border-radius: 17px !important;
+    color: #71858b !important;
+    background: transparent !important;
+  }
+
+  .gr-mobile-nav-item > span:last-child {
+    font-size: 9px !important;
+    font-weight: 700 !important;
+  }
+
+  .gr-mobile-nav-item.is-active {
+    color: var(--gr-brand-strong) !important;
+    background: #effcf8 !important;
+    box-shadow: 0 4px 10px rgba(13, 148, 136, 0.12);
+  }
+
+  .gr-mobile-nav-item.is-active > span:last-child {
+    color: var(--gr-brand-strong) !important;
+  }
+
+  .gr-mobile-nav-item.is-active > div {
+    color: var(--gr-brand-strong) !important;
+  }
+
+  .gr-mobile-nav-item.is-active svg {
+    color: var(--gr-brand) !important;
+  }
+
+  /* Consistent card language for every lazily loaded mobile module. */
+  .gr-mobile-page-scroll [class*="rounded-2xl"][class*="bg-white"],
+  .gr-mobile-page-scroll [class*="rounded-3xl"][class*="bg-white"],
+  .gr-mobile-page-scroll [class*="rounded-xl"][class*="bg-white"] {
+    border-color: var(--gr-line);
+  }
+
+  .gr-mobile-page-scroll [class*="shadow-sm"],
+  .gr-mobile-page-scroll [class*="shadow-md"],
+  .gr-mobile-page-scroll [class*="shadow-lg"] {
+    box-shadow: var(--gr-shadow-card) !important;
+  }
+
+  .gr-mobile-page-scroll h1,
+  .gr-mobile-page-scroll h2,
+  .gr-mobile-page-scroll h3 {
+    letter-spacing: -0.035em;
+  }
+
+  .gr-mobile-page-scroll input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]),
+  .gr-mobile-page-scroll select,
+  .gr-mobile-page-scroll textarea {
+    border-radius: 12px !important;
+  }
+
+  .gr-mobile-page-scroll button {
+    touch-action: manipulation;
+  }
+
+  .gr-mobile-page-scroll .overflow-x-auto {
+    border-radius: 14px;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Login and registration cards
+   -------------------------------------------------------------------------- */
+.gr-auth-card {
+  border: 1px solid var(--gr-line) !important;
+  border-radius: 26px !important;
+  background: #fff !important;
+  box-shadow: 0 22px 65px rgba(15, 68, 65, 0.08) !important;
+  padding: clamp(22px, 4vw, 34px) !important;
+}
+
+.gr-auth-card h1 {
+  color: var(--gr-ink) !important;
+  letter-spacing: -0.045em;
+}
+
+.gr-auth-card input {
+  min-height: 46px;
+  border: 1px solid var(--gr-line) !important;
+  border-radius: 13px !important;
+  background: #f8fcfb !important;
+}
+
+.gr-auth-card input:focus {
+  border-color: var(--gr-brand) !important;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.14) !important;
+}
+
+.gr-auth-card button[type="submit"] {
+  min-height: 48px;
+  border-radius: 14px !important;
+  background: linear-gradient(135deg, #10b981 0%, #0d9488 100%) !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  box-shadow: 0 8px 18px rgba(13, 148, 136, 0.18) !important;
+}
+
+/* Avoid unnecessary motion and preserve usability for reduced-motion users. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .gr-mobile-profile {
+    margin-inline: 10px !important;
+  }
+
+  .gr-mobile-balance {
+    margin-inline: 10px;
+  }
+
+  .gr-mobile-bottom-nav {
+    left: 9px !important;
+    right: 9px !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1100px) {
+  .gr-desktop-main {
+    padding: 20px !important;
+  }
+
+  .gr-desktop-main table {
+    min-width: 680px;
+  }
+}
+
+/* ========================================================================== 
+   GUYUB RUKUN — MODULE-LEVEL UI POLISH
+   Shared visual language for each resident module and each admin workspace.
+   Presentation-only selectors; no business logic or data behavior is changed.
+   ========================================================================== */
+
+/* Every mobile module uses the same canvas, width rhythm and typography. */
+.gr-mobile-module {
+  min-width: 0;
+  width: 100%;
+  color: var(--gr-ink);
+}
+
+.gr-module-page {
+  --module-space: clamp(14px, 3.6vw, 24px);
+  width: 100%;
+  min-width: 0;
+  min-height: 100% !important;
+  margin-inline: auto;
+  padding-bottom: 24px !important;
+  background: var(--gr-canvas) !important;
+  color: var(--gr-ink);
+  overflow-x: clip;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gr-module-page > div {
+  min-width: 0;
+}
+
+.gr-module-page h1,
+.gr-module-page h2,
+.gr-module-page h3,
+.gr-module-page h4 {
+  color: var(--gr-ink);
+  letter-spacing: -0.04em;
+}
+
+.gr-module-page h1 {
+  font-size: clamp(22px, 5.6vw, 29px);
+  line-height: 1.16;
+  font-weight: 800;
+}
+
+.gr-module-page h2 {
+  font-size: clamp(17px, 4.2vw, 21px);
+  line-height: 1.25;
+  font-weight: 800;
+}
+
+.gr-module-page h3 {
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 750;
+}
+
+.gr-module-page p {
+  line-height: 1.55;
+}
+
+/* One card treatment across lists, financial summaries, forms and detail views. */
+.gr-module-page [class*="rounded-xl"][class*="bg-white"],
+.gr-module-page [class*="rounded-2xl"][class*="bg-white"],
+.gr-module-page [class*="rounded-3xl"][class*="bg-white"],
+.gr-module-page [class*="rounded-\[1.5rem\]"][class*="bg-white"],
+.gr-module-page [class*="rounded-\[2rem\]"][class*="bg-white"] {
+  border-color: var(--gr-line) !important;
+  box-shadow: var(--gr-shadow-card) !important;
+}
+
+.gr-module-page [class*="shadow-sm"],
+.gr-module-page [class*="shadow-md"],
+.gr-module-page [class*="shadow-lg"],
+.gr-module-page [class*="shadow-xl"] {
+  box-shadow: var(--gr-shadow-card) !important;
+}
+
+/* Sticky module toolbars feel like a deliberate part of the app shell. */
+.gr-module-page [class*="sticky"][class*="top-0"] {
+  background: rgba(245, 250, 249, 0.94) !important;
+  border-color: rgba(13, 148, 136, 0.09) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+.gr-module-page button,
+.gr-module-page a,
+.gr-module-page input,
+.gr-module-page select,
+.gr-module-page textarea {
+  touch-action: manipulation;
+}
+
+.gr-module-page button {
+  border-radius: 13px;
+  transition: background-color 160ms ease, color 160ms ease,
+              border-color 160ms ease, box-shadow 160ms ease,
+              transform 160ms ease;
+}
+
+.gr-module-page button:active {
+  transform: translateY(1px);
+}
+
+/* Primary actions use the original teal/emerald brand. Buttons with other
+   semantic colors (blue, indigo, red, amber) keep their original meaning. */
+.gr-module-page button[class*="bg-teal-600"],
+.gr-module-page button[class*="bg-emerald-600"] {
+  background: linear-gradient(135deg, #10b981 0%, #0d9488 100%) !important;
+  border-color: var(--gr-brand) !important;
+  color: #fff !important;
+  box-shadow: 0 7px 16px rgba(13, 148, 136, 0.16) !important;
+}
+
+.gr-module-page button[class*="bg-teal-600"] svg,
+.gr-module-page button[class*="bg-emerald-600"] svg {
+  color: #fff !important;
+}
+
+.gr-module-page button[class*="bg-teal-600"]:hover,
+.gr-module-page button[class*="bg-emerald-600"]:hover {
+  background: var(--gr-brand-strong) !important;
+}
+
+/* Search, filter and data-entry controls use a consistent touch target. */
+.gr-module-page input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not([type="submit"]):not([type="button"]),
+.gr-module-page select,
+.gr-module-page textarea {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--gr-line) !important;
+  border-radius: 13px !important;
+  background: #fff !important;
+  color: var(--gr-ink) !important;
+  box-shadow: none !important;
+  font-size: 14px;
+}
+
+.gr-module-page textarea {
+  min-height: 96px;
+  padding-block: 12px;
+}
+
+.gr-module-page input::placeholder,
+.gr-module-page textarea::placeholder {
+  color: #94a3a7 !important;
+}
+
+.gr-module-page input:focus,
+.gr-module-page select:focus,
+.gr-module-page textarea:focus {
+  outline: none !important;
+  border-color: var(--gr-brand) !important;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.14) !important;
+}
+
+/* Tables and horizontally scrollable lists. */
+.gr-module-page .overflow-x-auto {
+  max-width: 100%;
+  border-radius: 16px;
+  border: 1px solid var(--gr-line);
+  background: #fff;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.gr-module-page table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
+
+.gr-module-page thead th {
+  padding: 12px 13px;
+  background: #f0f8f6;
+  color: #52716f;
+  border-bottom: 1px solid var(--gr-line);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+  white-space: nowrap;
+}
+
+.gr-module-page tbody td {
+  padding: 12px 13px;
+  color: #38515a;
+  border-bottom: 1px solid #edf4f2;
+  vertical-align: middle;
+}
+
+.gr-module-page tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.gr-module-page tbody tr:hover {
+  background: #f8fcfb;
+}
+
+/* Key module banners reuse the original teal-to-emerald brand gradient.
+   Emergency/status colors are intentionally preserved. */
+.gr-module-acara [class*="bg-gradient-to-br"],
+.gr-module-dokumen [class*="bg-gradient-to-r"],
+.gr-module-iuran [class*="bg-gradient-to-r"],
+.gr-module-kas [class*="bg-gradient-to-"],
+.gr-module-voting [class*="bg-gradient-to-br"] {
+  background: linear-gradient(135deg, #10b981 0%, #0d9488 100%) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 14px 30px rgba(13, 148, 136, 0.17) !important;
+}
+
+.gr-module-acara [class*="bg-gradient-to-br"] h1,
+.gr-module-acara [class*="bg-gradient-to-br"] h2,
+.gr-module-acara [class*="bg-gradient-to-br"] h3,
+.gr-module-acara [class*="bg-gradient-to-br"] p,
+.gr-module-dokumen [class*="bg-gradient-to-r"] h1,
+.gr-module-dokumen [class*="bg-gradient-to-r"] h2,
+.gr-module-dokumen [class*="bg-gradient-to-r"] h3,
+.gr-module-dokumen [class*="bg-gradient-to-r"] p,
+.gr-module-iuran [class*="bg-gradient-to-r"] h1,
+.gr-module-iuran [class*="bg-gradient-to-r"] h2,
+.gr-module-iuran [class*="bg-gradient-to-r"] h3,
+.gr-module-iuran [class*="bg-gradient-to-r"] p,
+.gr-module-kas [class*="bg-gradient-to-"] h1,
+.gr-module-kas [class*="bg-gradient-to-"] h2,
+.gr-module-kas [class*="bg-gradient-to-"] h3,
+.gr-module-kas [class*="bg-gradient-to-"] p,
+.gr-module-voting [class*="bg-gradient-to-br"] h1,
+.gr-module-voting [class*="bg-gradient-to-br"] h2,
+.gr-module-voting [class*="bg-gradient-to-br"] h3,
+.gr-module-voting [class*="bg-gradient-to-br"] p {
+  color: #fff !important;
+}
+
+.gr-module-acara [class*="bg-gradient-to-br"] [class*="text-blue-"],
+.gr-module-acara [class*="bg-gradient-to-br"] [class*="text-indigo-"],
+.gr-module-dokumen [class*="bg-gradient-to-r"] [class*="text-teal-"],
+.gr-module-iuran [class*="bg-gradient-to-r"] [class*="text-blue-"],
+.gr-module-kas [class*="bg-gradient-to-"] [class*="text-emerald-"],
+.gr-module-voting [class*="bg-gradient-to-br"] [class*="text-indigo-"] {
+  color: #d1fae5 !important;
+}
+
+/* Module-specific refinements. */
+.gr-module-warga .mobile-warga-card,
+.gr-module-warga .mobile-data-warga-toolbar,
+.gr-module-warga .mobile-data-warga-filter-row {
+  border-color: var(--gr-line) !important;
+}
+
+.gr-module-iuran [class*="rounded-2xl"][class*="bg-white"],
+.gr-module-kas [class*="rounded-2xl"][class*="bg-white"] {
+  border-radius: 20px !important;
+}
+
+.gr-module-surat canvas,
+.gr-module-surat .signature-pad,
+.gr-module-surat [class*="border-dashed"] {
+  border-radius: 16px;
+}
+
+.gr-module-scanqr video {
+  border-radius: 22px;
+  background: #122b35;
+  box-shadow: var(--gr-shadow-card);
+}
+
+.gr-module-umkm img,
+.gr-module-media img {
+  border-radius: 16px;
+}
+
+.gr-module-darurat button[class*="bg-rose-"],
+.gr-module-laporrt button[class*="bg-rose-"],
+.gr-module-laporan button[class*="bg-rose-"] {
+  background: #be3434 !important;
+  border-color: #be3434 !important;
+  color: #fff !important;
+}
+
+/* Desktop module surface: common cards, action bars and filters. */
+.gr-desktop-module {
+  min-width: 0;
+  width: 100%;
+  color: var(--gr-ink);
+}
+
+.gr-desktop-module > * {
+  min-width: 0;
+}
+
+.gr-desktop-module [class*="rounded-xl"][class*="bg-white"],
+.gr-desktop-module [class*="rounded-2xl"][class*="bg-white"],
+.gr-desktop-module [class*="rounded-3xl"][class*="bg-white"] {
+  border-color: var(--gr-line) !important;
+  box-shadow: var(--gr-shadow-card) !important;
+}
+
+.gr-desktop-module button {
+  border-radius: 12px;
+  transition: background-color 160ms ease, border-color 160ms ease,
+              color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.gr-desktop-module button:active {
+  transform: translateY(1px);
+}
+
+.gr-desktop-module button[class*="bg-teal-600"],
+.gr-desktop-module button[class*="bg-emerald-600"] {
+  background: linear-gradient(135deg, #10b981 0%, #0d9488 100%) !important;
+  border-color: var(--gr-brand) !important;
+  color: #fff !important;
+  box-shadow: 0 7px 16px rgba(13, 148, 136, 0.15) !important;
+}
+
+.gr-desktop-module button[class*="bg-teal-600"] svg,
+.gr-desktop-module button[class*="bg-emerald-600"] svg {
+  color: #fff !important;
+}
+
+.gr-desktop-module [role="tablist"] {
+  border: 1px solid var(--gr-line);
+  border-radius: 14px;
+  background: #f0f8f6;
+  padding: 4px;
+  gap: 4px;
+}
+
+.gr-desktop-module [role="tab"][aria-selected="true"] {
+  background: var(--gr-brand) !important;
+  color: #fff !important;
+  border-radius: 10px;
+}
+
+/* Keep dense modules usable at laptop and tablet widths. */
+@media (min-width: 768px) {
+  .gr-desktop-module {
+    padding-bottom: 24px;
+  }
+
+  .gr-desktop-module .overflow-x-auto {
+    max-width: 100%;
+    border-radius: 16px;
+    border: 1px solid var(--gr-line);
+    background: #fff;
+  }
+}
+
+@media (max-width: 767px) {
+  .gr-module-page {
+    padding-left: var(--module-space) !important;
+    padding-right: var(--module-space) !important;
+    padding-top: 12px !important;
+  }
+
+  .gr-module-page > div {
+    width: 100%;
+    max-width: 760px;
+    margin-inline: auto;
+  }
+
+  .gr-module-page [class*="grid-cols-"] {
+    min-width: 0;
+  }
+
+  .gr-module-page img,
+  .gr-module-page video,
+  .gr-module-page canvas {
+    max-width: 100%;
+  }
+
+  .gr-module-page .overflow-x-auto table {
+    min-width: 600px;
+  }
+
+  .gr-module-page button {
+    min-height: 40px;
+  }
+
+  .gr-module-page input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]),
+  .gr-module-page select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .gr-module-page textarea {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .gr-module-page {
+    --module-space: 11px;
+  }
+
+  .gr-module-page h1 {
+    font-size: 21px;
+  }
+
+  .gr-module-page [class*="rounded-2xl"][class*="bg-white"],
+  .gr-module-page [class*="rounded-3xl"][class*="bg-white"] {
+    border-radius: 18px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gr-module-page button,
+  .gr-desktop-module button {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Profile and resident detail refinement
+   Keeps the existing teal/emerald brand and all original interactions.
+   -------------------------------------------------------------------------- */
+.gr-profile-page {
+  background: var(--gr-canvas) !important;
+  color: var(--gr-ink);
+}
+
+.gr-profile-page .gr-profile-hero-bg::before,
+.gr-profile-page .gr-profile-hero-bg::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.gr-profile-page .gr-profile-hero-bg::before {
+  width: 230px;
+  height: 230px;
+  right: -78px;
+  top: -118px;
+  background: rgba(255, 255, 255, 0.11);
+  filter: blur(2px);
+}
+
+.gr-profile-page .gr-profile-hero-bg::after {
+  width: 170px;
+  height: 170px;
+  left: -82px;
+  bottom: -110px;
+  background: rgba(167, 243, 208, 0.13);
+  filter: blur(5px);
+}
+
+.gr-profile-page .gr-profile-digital-card {
+  isolation: isolate;
+}
+
+.gr-profile-page .gr-profile-digital-card > div[class*="absolute"] {
+  z-index: -1;
+}
+
+.gr-profile-page .gr-profile-info-card > div {
+  min-height: 76px;
+}
+
+.gr-profile-page .gr-profile-info-card > div:hover {
+  background: #f8fcfb;
+}
+
+.gr-profile-page .gr-profile-section,
+.gr-profile-page .gr-profile-info-card,
+.gr-profile-page .gr-profile-digital-card {
+  transform: translateZ(0);
+}
+
+.gr-profile-page button,
+.gr-profile-edit-page button {
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 160ms ease, border-color 160ms ease,
+              box-shadow 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.gr-profile-page button:active,
+.gr-profile-edit-page button:active {
+  transform: translateY(1px);
+}
+
+.gr-profile-edit-page input:not([type="file"]),
+.gr-profile-edit-page select,
+.gr-profile-edit-page textarea {
+  min-height: 46px;
+  border-radius: 14px !important;
+  border-color: #e1eeeb !important;
+  background: #fff !important;
+  color: var(--gr-ink) !important;
+  box-shadow: 0 1px 2px rgba(15, 68, 65, 0.025);
+}
+
+.gr-profile-edit-page input:focus,
+.gr-profile-edit-page select:focus,
+.gr-profile-edit-page textarea:focus {
+  border-color: var(--gr-brand) !important;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12) !important;
+}
+
+.mobile-data-warga-page .mobile-warga-card {
+  background: #fff;
+  border-color: #e3efec;
+}
+
+.mobile-data-warga-page .mobile-warga-card-header {
+  background: linear-gradient(180deg, #fff 0%, #fcfefd 100%);
+}
+
+.mobile-data-warga-page .mobile-warga-card-header:focus-within {
+  outline: 2px solid rgba(13, 148, 136, 0.18);
+  outline-offset: -2px;
+}
+
+.mobile-data-warga-page .mobile-warga-summary-row > div:last-child button[title*="informasi lengkap"] {
+  min-height: 36px;
+  padding-inline: 12px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.13);
+}
+
+.gr-warga-detail-modal {
+  overscroll-behavior: contain;
+}
+
+.gr-warga-detail-modal > div:nth-child(2) {
+  scrollbar-width: thin;
+  scrollbar-color: #b9d9d1 transparent;
+}
+
+.gr-warga-detail-modal > div:nth-child(2)::-webkit-scrollbar {
+  width: 6px;
+}
+
+.gr-warga-detail-modal > div:nth-child(2)::-webkit-scrollbar-thumb {
+  background: #b9d9d1;
+  border-radius: 999px;
+}
+
+@media (max-width: 640px) {
+  .gr-profile-page .gr-profile-hero-bg {
+    height: 276px;
+    border-bottom-left-radius: 34px;
+    border-bottom-right-radius: 34px;
+  }
+
+  .gr-profile-page .gr-profile-identity {
+    padding-top: max(34px, env(safe-area-inset-top));
+  }
+
+  .gr-profile-page .gr-profile-digital-card {
+    padding: 18px;
+    border-radius: 23px;
+  }
+
+  .gr-profile-page .gr-profile-info-card > div {
+    min-height: 70px;
+    padding: 13px;
+  }
+
+  .gr-warga-detail-modal {
+    max-height: 96dvh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .gr-warga-detail-modal > div:first-child {
+    padding-top: max(17px, env(safe-area-inset-top));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gr-profile-page button,
+  .gr-profile-edit-page button,
+  .mobile-data-warga-page .mobile-warga-card {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Guyub Rukun — simplified resident directory (no accordion/dropdown)
+   -------------------------------------------------------------------------- */
+.mobile-data-warga-page .gr-warga-directory-card {
+  border-radius: 22px;
+  box-shadow: 0 2px 12px rgba(18, 43, 53, 0.045);
+}
+
+.mobile-data-warga-page .gr-warga-directory-card:hover {
+  border-color: #c8e7e1;
+  box-shadow: 0 8px 24px rgba(13, 148, 136, 0.085);
+  transform: translateY(-1px);
+}
+
+.mobile-data-warga-page .gr-warga-avatar {
+  cursor: default;
+}
+
+.mobile-data-warga-page .gr-warga-detail-trigger {
+  min-height: 46px;
+  letter-spacing: 0.005em;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gr-warga-detail-modal section {
+  scroll-margin-top: 12px;
+}
+
+.gr-warga-detail-modal button,
+.gr-warga-detail-modal select,
+.gr-warga-detail-modal label {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 640px) {
+  .mobile-data-warga-page .gr-warga-directory-card > div:first-child {
+    align-items: flex-start;
+    gap: 10px;
+    padding: 13px;
+  }
+
+  .mobile-data-warga-page .gr-warga-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+  }
+
+  .mobile-data-warga-page .gr-warga-directory-card h5 {
+    font-size: 13px;
+  }
+
+}
+
+@media (max-width: 380px) {
+  .mobile-data-warga-page .gr-warga-directory-card > div:first-child {
+    flex-wrap: wrap;
+  }
+
+  .mobile-data-warga-page .gr-warga-directory-card > div:first-child > div:nth-child(2) {
+    flex: 1 1 calc(100% - 60px);
+  }
+
+}
+
+/* --------------------------------------------------------------------------
+   GUYUB RUKUN — MOBILE RESIDENT DIRECTORY POLISH
+   Layout tuned for narrow Android/iOS screens without changing data logic.
+   -------------------------------------------------------------------------- */
+.mobile-data-warga-page .gr-warga-directory-card {
+  min-width: 0;
+  border-color: #e4efec;
+  border-radius: 22px;
+  box-shadow: 0 4px 16px rgba(15, 54, 62, 0.055);
+}
+
+.mobile-data-warga-page .gr-warga-avatar {
+  display: block;
+  padding: 0;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-data-warga-page .gr-warga-avatar:not(:disabled) {
+  cursor: zoom-in;
+}
+
+.mobile-data-warga-page .gr-warga-avatar:focus-visible,
+.mobile-data-warga-page .gr-warga-detail-trigger:focus-visible {
+  outline: 3px solid rgba(13, 148, 136, 0.28);
+  outline-offset: 3px;
+}
+
+.mobile-data-warga-page .gr-warga-meta-badges > span {
+  max-width: 100%;
+  min-height: 25px;
+  display: inline-flex;
+  align-items: center;
+  white-space: normal;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.mobile-data-warga-page .gr-warga-detail-trigger {
+  margin-left: 14px;
+  margin-right: 14px;
+  width: calc(100% - 28px);
+  min-height: 46px;
+  border-radius: 14px;
+}
+
+.gr-warga-photo-preview img {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+@media (max-width: 640px) {
+  .mobile-data-warga-page {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: clip;
+  }
+
+  .mobile-data-warga-page .mobile-warga-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px !important;
+  }
+
+  .mobile-data-warga-page .gr-warga-directory-card {
+    border-radius: 20px;
+  }
+
+  .mobile-data-warga-page .gr-warga-directory-card > div:first-child {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 13px 12px;
+  }
+
+  .mobile-data-warga-page .gr-warga-avatar {
+    width: 54px;
+    height: 54px;
+    flex: 0 0 54px;
+    border-radius: 16px;
+  }
+
+  .mobile-data-warga-page .gr-warga-directory-card > div:first-child > div:nth-child(2) {
+    flex: 1 1 0%;
+    width: 0;
+    min-width: 0;
+  }
+
+  .mobile-data-warga-page .gr-warga-directory-card h5 {
+    font-size: 14px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .mobile-data-warga-page .gr-warga-directory-card > div:first-child > div:nth-child(2) > div:first-child {
+    align-items: flex-start;
+    gap: 5px 7px;
+  }
+
+  .mobile-data-warga-page .gr-warga-directory-card > div:first-child > div:nth-child(2) > div:nth-child(2) {
+    align-items: center;
+    gap: 4px 7px;
+    font-size: 11px;
+  }
+
+  .mobile-data-warga-page .gr-warga-meta-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 9px;
+  }
+
+  .mobile-data-warga-page .gr-warga-meta-badges > span {
+    padding: 5px 7px;
+    border-radius: 8px;
+    font-size: 9px;
+  }
+
+  .mobile-data-warga-page .gr-warga-detail-trigger {
+    min-height: 46px;
+    margin: 0 13px 13px;
+    width: calc(100% - 26px);
+    padding: 10px 12px;
+    font-size: 12px;
+    border-radius: 13px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-filter-row {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-toolbar-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-toolbar-actions button,
+  .mobile-data-warga-page .mobile-data-warga-toolbar-actions select {
+    min-height: 44px;
+    border-radius: 13px;
+  }
+
+  .gr-warga-detail-modal {
+    width: 100%;
+    max-height: 96dvh;
+    max-height: calc(96dvh - env(safe-area-inset-top, 0px));
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .gr-warga-detail-modal > div:first-child {
+    padding: 16px 16px 14px;
+    padding-top: max(16px, env(safe-area-inset-top, 0px));
+  }
+
+  .gr-warga-detail-modal > div:first-child .relative.mt-5 {
+    margin-top: 13px;
+    gap: 7px;
+  }
+
+  .gr-warga-detail-modal > div:first-child .relative.mt-5 > div {
+    min-width: 0;
+    padding: 9px 8px;
+    border-radius: 13px;
+  }
+
+  .gr-warga-detail-modal > div:first-child .relative.mt-5 p:first-child {
+    font-size: 8px;
+    line-height: 1.25;
+  }
+
+  .gr-warga-detail-modal > div:nth-child(2) {
+    min-height: 0;
+    padding: 16px 14px;
+    gap: 18px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .gr-warga-detail-modal section {
+    min-width: 0;
+  }
+
+  .gr-warga-detail-modal section h4 {
+    font-size: 13px;
+  }
+
+  .gr-warga-detail-modal .gr-warga-detail-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .gr-warga-detail-modal .gr-warga-detail-fields > div {
+    min-width: 0;
+    padding: 10px;
+    border-radius: 13px;
+  }
+
+  .gr-warga-detail-modal .gr-warga-detail-fields > div p:last-child {
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .gr-warga-detail-modal section .rounded-2xl {
+    overflow-wrap: anywhere;
+  }
+
+  .gr-warga-detail-modal > div:last-child {
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .gr-warga-detail-modal > div:last-child button {
+    min-height: 46px;
+    font-size: 13px;
+  }
+
+  .gr-warga-photo-preview {
+    padding: max(12px, env(safe-area-inset-top, 0px)) 12px max(12px, env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-data-warga-page .gr-warga-directory-card > div:first-child {
+    gap: 10px;
+    padding: 12px 11px 10px;
+  }
+
+  .mobile-data-warga-page .gr-warga-avatar {
+    width: 48px;
+    height: 48px;
+    flex-basis: 48px;
+    border-radius: 14px;
+  }
+
+  .mobile-data-warga-page .gr-warga-directory-card h5 {
+    font-size: 13px;
+  }
+
+  .mobile-data-warga-page .gr-warga-meta-badges > span {
+    font-size: 8px;
+    padding: 4px 6px;
+  }
+
+  .gr-warga-detail-modal .gr-warga-detail-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gr-warga-detail-modal > div:first-child .relative.mt-5 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-data-warga-page .gr-warga-directory-card,
+  .gr-warga-photo-preview,
+  .gr-warga-detail-modal {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ========================================================================
+   GUYUB RUKUN — WARGA DIRECTORY DESKTOP & RESPONSIVE POLISH
+   Scoped to the resident directory; visual-only, with existing data flows
+   and role permissions left untouched.
+   ======================================================================== */
+
+.gr-sidebar-brand-name {
+  color: #122b35 !important;
+  letter-spacing: -0.045em !important;
+}
+
+.gr-sidebar-brand-name span {
+  color: #0d9488 !important;
+}
+
+@media (min-width: 768px) {
+  .gr-desktop-main > div {
+    max-width: 1760px;
+  }
+
+  .gr-desktop-module[data-ui-module="Warga"] {
+    max-width: 1760px;
+    margin-inline: auto;
+  }
+
+  .gr-desktop-module[data-ui-module="Warga"] .mobile-data-warga-page {
+    max-width: 1680px;
+    min-height: auto !important;
+    padding: 22px clamp(12px, 1.35vw, 24px) 48px !important;
+    background: transparent !important;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-header {
+    min-height: 48px;
+    margin-bottom: 22px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e4efec;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-header > button:first-child {
+    min-height: 40px;
+    padding-inline: 15px;
+    border: 1px solid #e3eeeb;
+    border-radius: 12px;
+    background: #fff;
+    color: #49616a;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(18, 43, 53, 0.035);
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-header-actions {
+    gap: 9px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-header-actions > button {
+    min-height: 40px;
+    padding-inline: 15px;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+
+  .mobile-data-warga-page .mobile-data-warga-role-badge,
+  .mobile-data-warga-page .mobile-data-warga-total-badge {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding-inline: 12px;
+    font-size: 10px;
+    box-shadow: none;
+  }
+}
+
+.gr-warga-page-intro {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 0 22px;
+  border-bottom: 1px solid #e6efed;
+}
+
+.gr-warga-page-intro-icon {
+  display: flex;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 54px;
+  align-items: center;
+  justify-content: center;
+  color: #087f76;
+  border: 1px solid #ccebe3;
+  border-radius: 17px;
+  background: linear-gradient(145deg, #e9fbf5, #f6fffc);
+  box-shadow: 0 5px 14px rgba(13, 148, 136, 0.08);
+}
+
+.gr-warga-page-eyebrow,
+.gr-warga-list-eyebrow {
+  margin: 0 0 5px !important;
+  color: #0d9488 !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.13em !important;
+}
+
+.gr-warga-page-intro .mobile-data-warga-title {
+  margin: 0 !important;
+  color: #122b35 !important;
+  font-size: clamp(23px, 2vw, 30px) !important;
+  font-weight: 850 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -0.045em !important;
+}
+
+.gr-warga-page-description {
+  margin: 7px 0 0 !important;
+  color: #71838a !important;
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+}
+
+.gr-warga-bkkbn-panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #bfe9dc !important;
+  border-radius: 24px !important;
+  background: linear-gradient(135deg, #f1fcf7 0%, #ffffff 48%, #f2fbf9 100%) !important;
+  box-shadow: 0 10px 28px rgba(15, 118, 110, 0.055) !important;
+}
+
+.gr-warga-bkkbn-panel::before {
+  position: absolute;
+  top: 0;
+  left: 24px;
+  right: 24px;
+  height: 3px;
+  border-radius: 0 0 999px 999px;
+  background: linear-gradient(90deg, #0d9488, #34d399, #99f6e4);
+  content: "";
+}
+
+.gr-warga-bkkbn-panel > div:first-child {
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.gr-warga-bkkbn-panel > div:first-child > div > p:first-child {
+  color: #0f766e !important;
+  font-size: 10px !important;
+  letter-spacing: 0.11em;
+}
+
+.gr-warga-bkkbn-panel > div:first-child h3 {
+  margin-top: 5px !important;
+  font-size: 17px !important;
+  font-weight: 850 !important;
+}
+
+.gr-warga-bkkbn-panel > div:first-child p:last-child {
+  max-width: 720px;
+  color: #647b7e !important;
+  font-size: 12px !important;
+}
+
+.gr-warga-metric-card {
+  min-height: 132px;
+  padding: 18px !important;
+  border-radius: 18px !important;
+  background: rgba(255,255,255,0.94) !important;
+  box-shadow: 0 4px 14px rgba(18, 43, 53, 0.035) !important;
+}
+
+.gr-warga-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(18, 43, 53, 0.075) !important;
+}
+
+.gr-warga-metric-card > div:first-child > div:first-child > p:first-child {
+  font-size: 10px !important;
+  letter-spacing: 0.12em !important;
+}
+
+.gr-warga-metric-card > div:first-child > div:first-child > p:nth-child(2) {
+  font-size: 15px !important;
+  font-weight: 850 !important;
+}
+
+.gr-warga-metric-card > div:first-child > div:first-child > p:nth-child(3) {
+  margin-top: 5px !important;
+  font-size: 11px !important;
+  color: #778b90 !important;
+}
+
+.gr-warga-metric-card > div:last-child > span:first-child {
+  font-size: 32px !important;
+  line-height: 1 !important;
+  letter-spacing: -0.05em;
+}
+
+.gr-warga-metric-card > div:last-child > span:last-child {
+  font-size: 11px !important;
+}
+
+.gr-warga-transfer-panel {
+  border: 1px solid #f6d98a !important;
+  border-radius: 22px !important;
+  background: linear-gradient(115deg, #fffaf0 0%, #ffffff 52%, #fff7ed 100%) !important;
+  box-shadow: 0 8px 22px rgba(180, 83, 9, 0.045) !important;
+}
+
+.gr-warga-transfer-panel h3 {
+  font-size: 16px !important;
+  font-weight: 850 !important;
+}
+
+.gr-warga-transfer-panel p {
+  color: #786b59 !important;
+  font-size: 12px !important;
+}
+
+.gr-warga-transfer-panel button {
+  min-height: 44px;
+  border-radius: 13px !important;
+  padding-inline: 19px !important;
+  font-weight: 800 !important;
+  box-shadow: 0 7px 16px rgba(217, 119, 6, 0.15) !important;
+}
+
+.gr-warga-demography-panel {
+  border: 1px solid #e0ece9 !important;
+  border-radius: 22px !important;
+  padding: 22px !important;
+  box-shadow: 0 8px 24px rgba(18, 43, 53, 0.045) !important;
+}
+
+.gr-warga-demography-panel > div:first-child {
+  margin-bottom: 18px !important;
+}
+
+.gr-warga-demography-panel > div:first-child span:first-child {
+  font-size: 12px !important;
+  letter-spacing: 0.055em !important;
+}
+
+.gr-warga-demography-panel > div:first-child span:nth-child(2) {
+  font-size: 10px !important;
+}
+
+.gr-warga-demography-panel > div:first-child > div > span:last-child {
+  color: #70838a !important;
+  font-size: 11px !important;
+}
+
+.gr-warga-demography-panel > div:nth-child(2) {
+  min-height: 220px;
+  border-radius: 16px !important;
+  background: linear-gradient(180deg, #f8fcfb 0%, #ffffff 100%) !important;
+}
+
+.gr-warga-search-panel {
+  padding: 16px !important;
+  border: 1px solid #e2eeeb !important;
+  border-radius: 20px !important;
+  background: #ffffff !important;
+  box-shadow: 0 6px 20px rgba(18, 43, 53, 0.035) !important;
+}
+
+.gr-warga-search-panel .mobile-data-warga-filter-row {
+  align-items: stretch;
+}
+
+.gr-warga-search-panel .mobile-data-warga-filter-row input,
+.gr-warga-search-panel .mobile-data-warga-filter-row select {
+  min-height: 46px !important;
+  border-radius: 13px !important;
+  font-size: 13px !important;
+}
+
+.gr-warga-search-panel .mobile-data-warga-filter-row input {
+  padding-left: 42px !important;
+}
+
+.gr-warga-search-panel .mobile-data-warga-toolbar-actions button {
+  min-height: 46px;
+  border-radius: 13px !important;
+  padding-inline: 15px;
+}
+
+.gr-warga-search-panel .mobile-data-warga-toolbar-actions button[title^="Klik untuk memuat ulang"] {
+  display: none !important;
+}
+
+.gr-warga-list-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 24px 0 14px;
+}
+
+.gr-warga-list-heading h3 {
+  margin: 0 !important;
+  color: #122b35 !important;
+  font-size: 18px !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.04em !important;
+}
+
+.gr-warga-list-heading > div > p:last-child {
+  margin: 5px 0 0 !important;
+  color: #71838a !important;
+  font-size: 11px !important;
+}
+
+.gr-warga-list-count {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  color: #0f766e;
+  border: 1px solid #d3ece5;
+  border-radius: 999px;
+  background: #f0fbf7;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.gr-warga-directory-card {
+  border: 1px solid #e2ecea !important;
+  border-radius: 20px !important;
+  box-shadow: 0 5px 18px rgba(18, 43, 53, 0.045) !important;
+}
+
+.gr-warga-directory-card:hover {
+  border-color: #b9e3d9 !important;
+  box-shadow: 0 12px 28px rgba(13, 91, 84, 0.08) !important;
+}
+
+.gr-warga-directory-card .gr-warga-avatar {
+  border-radius: 17px !important;
+  border-color: #dcece8 !important;
+  box-shadow: 0 4px 12px rgba(18, 43, 53, 0.07) !important;
+}
+
+.gr-warga-directory-card h5 {
+  color: #18343d !important;
+  font-size: 15px !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.025em;
+}
+
+.gr-warga-directory-card .gr-warga-detail-trigger {
+  min-height: 42px;
+  margin-bottom: 14px;
+  border-radius: 12px !important;
+  background: #f1fbf8 !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+  box-shadow: none !important;
+}
+
+.gr-warga-directory-card .gr-warga-detail-trigger:hover {
+  background: #e5f7f1 !important;
+  border-color: #b7e5d8 !important;
+}
+
+@media (min-width: 1200px) {
+  .mobile-data-warga-page .gr-warga-directory-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .mobile-data-warga-page .gr-warga-directory-grid > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0 !important;
+  }
+
+  .mobile-data-warga-page .gr-warga-directory-grid > article {
+    height: 100%;
+    margin: 0 !important;
+  }
+
+  .mobile-data-warga-page .gr-warga-directory-grid > :not(article) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 767px) {
+  .gr-warga-page-intro {
+    align-items: flex-start;
+    gap: 12px;
+    padding: 3px 0 16px;
+    margin-bottom: 16px !important;
+  }
+
+  .gr-warga-page-intro-icon {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+    border-radius: 14px;
+  }
+
+  .gr-warga-page-intro-icon svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .gr-warga-page-intro .mobile-data-warga-title {
+    font-size: clamp(19px, 5vw, 23px) !important;
+    line-height: 1.2 !important;
+  }
+
+  .gr-warga-page-description {
+    font-size: 11px !important;
+    line-height: 1.45 !important;
+  }
+
+  .gr-warga-bkkbn-panel,
+  .gr-warga-demography-panel,
+  .gr-warga-transfer-panel {
+    border-radius: 19px !important;
+  }
+
+  .gr-warga-bkkbn-panel > div:first-child h3 {
+    font-size: 15px !important;
+  }
+
+  .gr-warga-bkkbn-panel > div:first-child p:last-child {
+    font-size: 11px !important;
+  }
+
+  .gr-warga-metric-card {
+    min-height: 116px;
+    padding: 14px !important;
+  }
+
+  .gr-warga-demography-panel {
+    padding: 14px !important;
+  }
+
+  .gr-warga-search-panel {
+    padding: 12px !important;
+    border-radius: 17px !important;
+  }
+
+  .gr-warga-list-heading {
+    align-items: flex-start;
+    margin-top: 19px;
+  }
+
+  .gr-warga-list-heading h3 {
+    font-size: 16px !important;
+  }
+
+  .gr-warga-list-heading > div > p:last-child {
+    max-width: 230px;
+    font-size: 10px !important;
+  }
+
+  .gr-warga-list-count {
+    min-height: 29px;
+    padding-inline: 9px;
+    font-size: 9px;
+  }
+
+  .mobile-data-warga-page .gr-warga-directory-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mobile-data-warga-page .gr-warga-directory-grid > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0 !important;
+  }
+}
+
+/* Keep both parts of the brand name legible in the expanded desktop sidebar. */
+.gr-desktop-sidebar > div:first-child .gr-sidebar-brand-name {
+  color: #122b35 !important;
+}
+.gr-desktop-sidebar > div:first-child .gr-sidebar-brand-name span {
+  color: #0d9488 !important;
+}
