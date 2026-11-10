@@ -465,7 +465,21 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
     }
   };
 
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Detail warga ditampilkan dari data yang sudah dimuat; tidak menambah endpoint baru.
+  const [selectedWargaDetail, setSelectedWargaDetail] = useState<any | null>(null);
+  useEffect(() => {
+    if (!selectedWargaDetail) return;
+    const previousOverflow = document.body.style.overflow;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelectedWargaDetail(null);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [selectedWargaDetail]);
   const [selectedBkkbnCategory, setSelectedBkkbnCategory] = useState<'wus' | 'pus' | null>(null);
   const [bkkbnSearchQuery, setBkkbnSearchQuery] = useState('');
   const [bkkbnAgeRange, setBkkbnAgeRange] = useState<'semua' | '15-19' | '20-29' | '30-39' | '40-49'>('semua');
@@ -655,7 +669,6 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
   const [filterBlok, setFilterBlok] = useState('');
   const [filterAgeCategory, setFilterAgeCategory] = useState<'' | 'balita' | 'anak' | 'remaja' | 'dewasa' | 'lansia'>('');
   const [previewDocs, setPreviewDocs] = useState<{ docs: { url: string; title: string }[]; currentIndex: number; wargaName: string } | null>(null);
-  const [previewPhotoWarga, setPreviewPhotoWarga] = useState<any | null>(null);
   const [extractingId, setExtractingId] = useState<string | null>(null);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
 
@@ -1496,7 +1509,6 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
           prev.map(w => (w.id === wargaId ? { ...w, ...data.user, hasKk: Boolean(data.user.dokumenKk) } : w))
         );
       }
-      setExpandedId(wargaId);
       showStatusBanner(data.message || `Berhasil mengekstrak data KK ${wargaName}!`);
       setLastExtractedInfo({
         wargaName,
@@ -2312,7 +2324,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
 
   return (
     <motion.div
-      className="mobile-data-warga-page min-h-screen bg-slate-50 px-3 pt-3 pb-32 sm:px-5 sm:pt-5 sm:pb-24"
+      className="gr-module-page gr-module-warga mobile-data-warga-page min-h-screen bg-slate-50 px-3 pt-3 pb-32 sm:px-5 sm:pt-5 sm:pb-24"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.26, ease: 'easeOut' }}
@@ -3248,7 +3260,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                                 className="hover:bg-teal-50/40 transition-colors group cursor-pointer"
                                 onClick={() => {
                                   const targetW = person.wargaObj || allWargaFullData.find(w => w.id === person.wargaId) || wargaData.find(w => w.id === person.wargaId);
-                                  if (targetW) setPreviewPhotoWarga(targetW);
+                                  if (targetW) setSelectedWargaDetail(targetW);
                                 }}
                               >
                                 <td className="py-3 px-3 font-bold text-slate-400 whitespace-nowrap">
@@ -3257,7 +3269,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                                 <td className="py-3 px-3">
                                   <div className="font-extrabold text-slate-900 text-sm flex items-center gap-1.5 hover:text-teal-700">
                                     <span>{person.nama}</span>
-                                    <span className="text-[10px] text-teal-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">👁️ Foto</span>
+                                    <span className="text-[10px] text-teal-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">View</span>
                                   </div>
                                   <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                                     <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 whitespace-nowrap">
@@ -3472,523 +3484,84 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
           {/* LIST WARGA */}
           <div className="mobile-warga-list space-y-3 sm:space-y-4">
             {filteredWargaData.map((warga, idx) => {
-              const members = warga.members || [];
+              const members = Array.isArray(warga.members) ? warga.members : [];
               const isCurrentUser = isOwnAccount(warga);
-              const canEditFamily = isKetuaRT || isCurrentUser;
-              const canViewFamily = isKetuaRT || isCurrentUser;
-              const isExpanded = canViewFamily && (!isKetuaRT ? (expandedId === null || expandedId === warga.id) : expandedId === warga.id);
               const hasKk = Boolean(warga.hasKk || (warga.dokumenKk && String(warga.dokumenKk).trim() !== ''));
               const hasKtp = Boolean(warga.hasKtp || (Array.isArray(warga.dokumenKtp) ? warga.dokumenKtp.length > 0 : Boolean(warga.dokumenKtp)));
               const houseInfo = parseHouseInfo(warga);
-              const citizenNoKk = getResolvedNoKk(warga);
-              const canViewCitizenNoKk = isPrivilegedKkViewer || isCurrentUser;
+              const roleLabel = warga.role === 'admin' ? 'Ketua RT / Admin'
+                : warga.role === 'pengurus' ? 'Pengurus RT'
+                : warga.role === 'bendahara' ? 'Bendahara'
+                : warga.role === 'sekretaris' ? 'Sekretaris' : 'Warga';
 
               return (
-                <div key={`${warga.id || 'warga'}_${idx}`} className={`mobile-warga-card bg-white rounded-[1.5rem] border ${isCurrentUser ? 'border-teal-500 shadow-md ring-2 ring-teal-500/20' : isExpanded ? 'border-teal-400 shadow-xl ring-2 ring-teal-500/15' : 'border-slate-200/80 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.06)] hover:border-teal-300 hover:shadow-md'} overflow-hidden transition-all duration-300 ease-out mobile-warga-card-shell`}>
-                  <div
-                    className="mobile-warga-card-header p-3.5 sm:p-4 flex items-start sm:items-center gap-3 select-none cursor-pointer"
-                    onClick={() => {
-                      if (canViewFamily) {
-                        setExpandedId(isExpanded ? '__closed__' : warga.id);
-                      } else {
-                        setPreviewPhotoWarga(warga);
-                      }
-                    }}
-                  >
-                    {/* Avatar / Foto Profil Warga (Klik untuk Pratinjau Foto) */}
-                    <div 
-                      className="relative shrink-0 mt-0.5 sm:mt-0 group/avatar cursor-pointer"
-                      title="Klik untuk melihat pratinjau foto profil"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreviewPhotoWarga(warga);
-                      }}
+                <article
+                  key={`${warga.id || 'warga'}_${idx}`}
+                  className={`mobile-warga-card gr-warga-directory-card group overflow-hidden rounded-[1.5rem] border bg-white transition-all duration-200 ${isCurrentUser ? 'border-teal-200 ring-1 ring-teal-100' : 'border-slate-100'}`}
+                >
+                  <div className="flex items-center gap-3.5 p-4 sm:p-5">
+                    {/* Foto menjadi identitas statis; detail dibuka melalui tombol View di bawah kartu. */}
+                    <div
+                      className="gr-warga-avatar relative h-[58px] w-[58px] shrink-0 overflow-hidden rounded-2xl border border-slate-100 bg-teal-50 text-teal-800 shadow-sm"
+                      aria-label={`Foto ${warga.nama || 'warga'}`}
                     >
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white font-extrabold text-sm flex flex-col items-center justify-center shrink-0 overflow-hidden border border-slate-100 px-0.5 transition-transform group-hover/avatar:scale-105 shadow-xs">
-                        {warga.photo ? (
-                          <img
-                            src={warga.photo}
-                            alt={warga.nama}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : houseInfo.hasSpecific && houseInfo.shortCode.length > 1 ? (
-                          <>
-                            <span className="text-[8px] font-bold uppercase tracking-wider opacity-85 leading-none">BLOK</span>
-                            <span className="font-black text-xs leading-tight mt-0.5">{houseInfo.shortCode}</span>
-                          </>
-                        ) : (
-                          houseInfo.shortCode
-                        )}
-                      </div>
-
-                      <span className={`absolute bottom-[-2px] right-[-2px] w-3.5 h-3.5 ${warga.isOnline ? 'bg-emerald-500 ring-2 ring-white' : 'bg-slate-300'} rounded-full shadow-xs`}></span>
+                      {warga.photo ? (
+                        <img src={warga.photo} alt={warga.nama || 'Foto warga'} className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-xl font-black">
+                          {String(warga.nama || 'W').trim().charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      <span className={`absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full border-2 border-white ${warga.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                     </div>
 
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <h5 className="font-extrabold text-slate-800 text-sm leading-snug break-words">
-                          {warga.nama}
+                        <h5 className="min-w-0 break-words text-sm font-extrabold leading-snug text-slate-800 sm:text-[15px]">
+                          {warga.nama || 'Nama belum tersedia'}
                         </h5>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          warga.role === 'admin'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : warga.role === 'pengurus'
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : warga.role === 'bendahara'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : warga.role === 'sekretaris'
-                            ? 'bg-violet-50 text-violet-700 border-violet-200'
-                            : 'bg-slate-100 text-slate-600 border-slate-200'
+                        <span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold ${
+                          warga.role === 'admin' ? 'border-amber-200 bg-amber-50 text-amber-700'
+                          : warga.role === 'pengurus' ? 'border-blue-200 bg-blue-50 text-blue-700'
+                          : warga.role === 'bendahara' ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                          : warga.role === 'sekretaris' ? 'border-violet-200 bg-violet-50 text-violet-700'
+                          : 'border-slate-200 bg-slate-50 text-slate-600'
                         }`}>
-                          {warga.role === 'admin'
-                            ? 'Ketua RT / Admin'
-                            : warga.role === 'pengurus'
-                            ? 'Pengurus RT'
-                            : warga.role === 'bendahara'
-                            ? 'Bendahara'
-                            : warga.role === 'sekretaris'
-                            ? 'Sekretaris'
-                            : 'Warga'}
+                          {roleLabel}
                         </span>
                         {isCurrentUser && (
-                          <span className="bg-gradient-to-r from-teal-700 to-emerald-700 text-white text-[9px] px-2.5 py-0.5 rounded-full uppercase font-black tracking-widest shrink-0 border border-teal-400 shadow-xs flex items-center gap-1">
-                            <span>★</span>
-                            <span>Akun Anda</span>
-                          </span>
+                          <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[9px] font-extrabold text-teal-700">Akun Anda</span>
                         )}
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                        <HouseBadge warga={warga} size="md" />
-                        {warga.username && (
-                          <span className="text-[11px] text-slate-400 font-semibold">@{warga.username}</span>
-                        )}
+                      <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500">
+                        <HouseBadge warga={warga} size="sm" />
+                        {warga.username && <span className="truncate font-medium">@{warga.username}</span>}
                       </div>
 
-                      {/* Baris No. Kartu Keluarga (Hanya Terlihat oleh Ketua RT, Sekretaris, dan Akun Warga Terkait) */}
-                      {canViewCitizenNoKk && (
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                          {citizenNoKk ? (
-                            <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200/90 text-teal-950 px-2.5 py-1 rounded-xl shadow-2xs text-[11px] font-mono font-bold">
-                              <span className="text-teal-700 font-sans text-[10px] uppercase tracking-wider font-extrabold">📋 No. KK:</span>
-                              <span className="font-extrabold tracking-wider">{citizenNoKk}</span>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigator.clipboard.writeText(citizenNoKk);
-                                  showStatusBanner(`No. KK ${citizenNoKk} disalin!`);
-                                }}
-                                title="Salin No. KK"
-                                className="text-[9px] bg-white text-teal-700 border border-teal-200 hover:bg-teal-100 px-1.5 py-0.5 rounded-md font-sans font-extrabold cursor-pointer transition-colors ml-0.5"
-                              >
-                                Salin
-                              </button>
-                            </div>
-                          ) : hasKk ? (
-                            <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-lg text-[10px] font-bold">
-                              <span>📋 No. KK:</span>
-                              <span className="font-normal italic">Terunggah di KK</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 bg-slate-50 text-slate-400 border border-slate-200 px-2 py-0.5 rounded-lg text-[10px] font-medium">
-                              <span>📋 No. KK:</span>
-                              <span className="italic">Belum ada</span>
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="mobile-warga-summary-row flex items-center justify-between gap-2 mt-2">
-                        <div className="mobile-warga-summary-badges flex flex-wrap items-center gap-1.5">
-                          <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
-                            {warga.rt || 'RT 01'}
-                          </span>
-                          <span className="inline-flex items-center bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md text-[10px] font-bold">
-                            👨‍👩‍👧‍👦 {members.length + 1} Jiwa
-                          </span>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                              hasKk
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-slate-100 text-slate-500'
-                            }`}
-                          >
-                            KK: {hasKk ? '✓ Tersedia' : 'Belum Ada'}
-                          </span>
-                          {hasKk && (() => {
-                            const reg = resolveWargaKkRegion(warga);
-                            return (
-                              <span className={`inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md border shadow-2xs ${reg.badgeColor}`}>
-                                <span>{reg.icon}</span>
-                                <span>{reg.shortLabel}</span>
-                              </span>
-                            );
-                          })()}
-                          {hasKtp && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              KTP: ✓ Tersedia
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          {(isKetuaRT || isCurrentUser || isAdmin || currentUser?.role === 'developer') && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setWargaEditForm({
-                                  id: warga.id,
-                                  username: warga.username || '',
-                                  nama: warga.nama || '',
-                                  noHp: warga.noHp || '',
-                                  status: warga.status || 'Warga Tetap',
-                                  umur: warga.umur ? String(warga.umur) : '',
-                                  tglLahir: warga.tglLahir || '',
-                                  jenisKelamin: inferJenisKelamin(warga.nama || '', 'Kepala Keluarga', warga.jenisKelamin),
-                                  noKk: warga.noKk || '',
-                                  alamat: warga.alamat || ''
-                                });
-                                setEditingWarga(warga);
-                                setShowWargaEditModal(true);
-                              }}
-                              className="px-2.5 py-1 text-[11px] font-extrabold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl transition-colors cursor-pointer flex items-center gap-1"
-                              title="Edit data warga & jenis kelamin"
-                            >
-                              <icons.edit className="w-3.5 h-3.5" />
-                              <span>Edit Warga</span>
-                            </button>
-                          )}
-                          {(isKetuaRT || isAdmin || currentUser?.role === 'developer' || currentUser?.role === 'pengurus' || currentUser?.role === 'sekretaris') && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setUsernameTargetWarga(warga);
-                                setNewUsernameInput(warga.username || '');
-                                setShowKetuaRtUsernameModal(true);
-                              }}
-                              className="px-2.5 py-1 text-[11px] font-extrabold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                              title="Perbarui username akun warga (Wewenang Ketua RT)"
-                            >
-                              <span className="font-mono font-black text-amber-600">@</span>
-                              <span>Username</span>
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPreviewPhotoWarga(warga);
-                            }}
-                            className="px-2.5 py-1 text-[11px] font-extrabold bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-xl transition-colors cursor-pointer flex items-center gap-1"
-                            title="Pratinjau profil & identitas warga"
-                          >
-                            <span>📷</span>
-                            <span className="hidden sm:inline">Profil</span>
-                          </button>
-
-                          {canViewFamily && (
-                            <div className={`p-1.5 rounded-xl transition-colors flex items-center justify-center shrink-0 ${isExpanded ? 'bg-teal-100 text-teal-800' : 'bg-slate-100 text-slate-500'}`}>
-                              <icons.lainnya className={`w-3.5 h-3.5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
-                            </div>
-                          )}
-                        </div>
+                      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                        <span className="rounded-lg border border-sky-100 bg-sky-50 px-2 py-1 text-[10px] font-bold text-sky-700">{warga.rt || 'RT 01'}</span>
+                        <span className="rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-600">{members.length + 1} anggota keluarga</span>
+                        <span className={`rounded-lg px-2 py-1 text-[10px] font-semibold ${hasKk ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                          {hasKk ? 'KK tersedia' : 'KK belum ada'}
+                        </span>
+                        {hasKtp && <span className="rounded-lg bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">KTP tersedia</span>}
+                        {houseInfo.shortCode && <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">Unit {houseInfo.shortCode}</span>}
                       </div>
                     </div>
                   </div>
 
-                  <AnimatePresence>
-                    {canViewFamily && isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.26, ease: 'easeInOut' }}
-                        className="px-4 pb-4 border-t border-gray-100 bg-slate-50/70"
-                      >
-                        <div className="pt-4 space-y-4">
-                          {/* DETAIL NO. KK & DOKUMEN (Hanya Ketua RT, Sekretaris, dan Akun Warga Terkait) */}
-                          {citizenNoKk && canViewCitizenNoKk && (
-                            <div className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200/90 rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-xs">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
-                                  KK
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-[10px] font-bold text-teal-700 uppercase tracking-wider">No. Kartu Keluarga (KK)</p>
-                                  <p className="font-mono font-black text-sm text-teal-950 tracking-wide mt-0.5 truncate">{citizenNoKk}</p>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigator.clipboard.writeText(citizenNoKk);
-                                  showStatusBanner('No. KK berhasil disalin ke clipboard!');
-                                }}
-                                className="px-3 py-1.5 bg-white hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-xs shrink-0 flex items-center gap-1"
-                              >
-                                <span>Salin</span>
-                              </button>
-                            </div>
-                          )}
-
-                          {/* DETAIL WILAYAH ASAL KK DOKUMEN */}
-                          {hasKk && (() => {
-                            const reg = resolveWargaKkRegion(warga);
-                            return (
-                              <div className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 shadow-xs ${reg.badgeColor}`}>
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <span className="text-xl shrink-0">{reg.icon}</span>
-                                  <div className="min-w-0">
-                                    <p className="text-[10px] font-black uppercase tracking-wider opacity-80">Wilayah Asal Kartu Keluarga</p>
-                                    <p className="text-xs font-black truncate">{reg.label}</p>
-                                    {(warga.alamatKk || reg.alamat) && (
-                                      <p className="text-[10px] font-semibold opacity-90 truncate mt-0.5">
-                                        Alamat Asal: {warga.alamatKk || reg.alamat}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                                {isKetuaRT && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditingKkRegionWarga(warga);
-                                      setRegionFormCategory(reg.category === 'Belum Teridentifikasi' ? '' : reg.category as any);
-                                      setRegionFormAlamat(warga.alamatKk || reg.alamat || '');
-                                      setRegionFormKecamatan(warga.kkKecamatan || reg.kecamatan || '');
-                                      setRegionFormKelurahan(warga.kkKelurahan || reg.kelurahan || '');
-                                      setRegionFormKabupatenKota(warga.kkKabupatenKota || reg.kabupatenKota || (reg.category === 'Kabupaten Tangerang' ? 'Kabupaten Tangerang' : reg.category === 'Kota Tangerang' ? 'Kota Tangerang' : ''));
-                                      setRegionFormProvinsi(warga.kkProvinsi || reg.provinsi || ((reg.category === 'Kabupaten Tangerang' || reg.category === 'Kota Tangerang') ? 'Banten' : ''));
-                                    }}
-                                    className="text-[10px] font-extrabold px-2.5 py-1.5 bg-white rounded-xl border shadow-xs hover:bg-slate-50 transition-colors cursor-pointer shrink-0"
-                                  >
-                                    ✏️ Ubah Kategori
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })()}
-
-                          {/* DETAIL RUMAH & ALAMAT */}
-                          <div className="bg-white p-3.5 rounded-2xl border border-teal-100/90 shadow-xs flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Identitas Rumah / Unit</p>
-                              <p className="text-xs font-bold text-slate-800 mt-0.5">{warga.alamat || 'Alamat belum dilengkapi'}</p>
-                            </div>
-                            <HouseBadge warga={warga} size="md" />
-                          </div>
-
-                          {/* ADMIN CONTROLS */}
-                          {(isAdmin || currentUser?.role === 'developer') && warga.id !== currentUser?.id && (
-                            <div className="bg-white p-3 rounded-2xl border border-red-100 flex flex-wrap gap-3 items-end">
-                              <div className="flex-1 min-w-[120px]">
-                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Role Akun</label>
-                                <select
-                                  value={warga.role || 'warga'}
-                                  onChange={async (e) => {
-                                    await apiFetch(`/api/warga/${warga.id}/role`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: e.target.value }) });
-                                    fetchWarga();
-                                  }}
-                                  className="w-full text-xs border border-gray-200 rounded-xl p-2 bg-gray-50 outline-none"
-                                >
-                                  {currentUser?.role === 'developer' && <option value="admin">Admin</option>}
-                                  <option value="warga">Warga</option>
-                                  <option value="pengurus">Pengurus</option>
-                                  <option value="bendahara">Bendahara</option>
-                                  <option value="sekretaris">Sekretaris</option>
-                                </select>
-                              </div>
-                              <div className="flex-1 min-w-[120px]">
-                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Status</label>
-                                <select
-                                  value={warga.isApproved ? 'aktif' : 'tidak_aktif'}
-                                  onChange={async (e) => {
-                                    await apiFetch(`/api/warga/${warga.id}/approval`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isApproved: e.target.value === 'aktif' }) });
-                                    fetchWarga();
-                                  }}
-                                  className="w-full text-xs border border-gray-200 rounded-xl p-2 bg-gray-50 outline-none"
-                                >
-                                  <option value="aktif">Aktif</option>
-                                  <option value="tidak_aktif">Nonaktif / Belum disetujui</option>
-                                </select>
-                              </div>
-                              {(isKetuaRT || isAdmin || currentUser?.role === 'developer' || currentUser?.role === 'pengurus' || currentUser?.role === 'sekretaris') && (
-                                <button 
-                                  type="button"
-                                  onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    setUsernameTargetWarga(warga);
-                                    setNewUsernameInput(warga.username || '');
-                                    setShowKetuaRtUsernameModal(true);
-                                  }} 
-                                  className="text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 font-bold px-3 py-2 rounded-xl text-xs transition-colors h-[34px] cursor-pointer flex items-center gap-1.5"
-                                  title="Perbarui username akun warga"
-                                >
-                                  <span className="font-mono font-black text-amber-700">@</span>
-                                  <span>Ubah Username</span>
-                                </button>
-                              )}
-                              <button 
-                                type="button"
-                                onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  setWargaToDelete(warga);
-                                }} 
-                                className="text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 font-bold px-3 py-2 rounded-xl text-xs transition-colors h-[34px] cursor-pointer flex items-center gap-1.5"
-                                title="Hapus data warga dari RT"
-                              >
-                                <icons.trash className="w-3.5 h-3.5" />
-                                <span>Hapus Warga</span>
-                              </button>
-                            </div>
-                          )}
-
-                          {/* INFO & ACTIONS */}
-                          <div className="flex flex-col gap-3">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2.5 bg-white p-3.5 rounded-2xl border border-gray-100">
-                              <div>
-                                <p className="text-[10px] font-bold text-gray-500 uppercase">
-                                  Dokumen {['admin', 'sekretaris', 'bendahara', 'pengurus'].includes(warga.role) ? 'Pengurus' : 'Warga'}
-                                </p>
-                                <p className="text-xs font-semibold mt-0.5">
-                                  {(hasKk || hasKtp)
-                                    ? <span className="text-green-600 flex items-center gap-1">✅ Tersedia ({hasKk ? 'KK' : ''}{hasKk && hasKtp ? ' & ' : ''}{hasKtp ? 'KTP' : ''})</span>
-                                    : <span className="text-orange-500 flex items-center gap-1">⚠️ Belum Lengkap</span>}
-                                </p>
-                              </div>
-                              {(isKetuaRT || isCurrentUser) && (
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <label className="text-xs text-teal-700 font-bold bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-1.5 rounded-xl transition-colors cursor-pointer">
-                                    {uploadingDocWargaId === warga.id ? 'Memproses...' : hasKk ? 'Ganti KK' : '+ Upload KK'}
-                                    <input
-                                      type="file"
-                                      accept="image/*,application/pdf"
-                                      className="hidden"
-                                      disabled={uploadingDocWargaId === warga.id}
-                                      onChange={(e) => handleUploadWargaDoc(warga, 'kk', e)}
-                                    />
-                                  </label>
-                                  <label className="text-xs text-indigo-700 font-bold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-xl transition-colors cursor-pointer">
-                                    + Upload KTP
-                                    <input
-                                      type="file"
-                                      accept="image/*,application/pdf"
-                                      multiple
-                                      className="hidden"
-                                      disabled={uploadingDocWargaId === warga.id}
-                                      onChange={(e) => handleUploadWargaDoc(warga, 'ktp', e)}
-                                    />
-                                  </label>
-                                  {/* Lihat File KK hanya untuk Ketua RT (atau pemilik dokumen sendiri) */}
-                                  {(isKetuaRT || isCurrentUser) && (hasKk || hasKtp) && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const docs: { url: string; title: string }[] = [];
-                                        if (warga.dokumenKk) docs.push({ url: warga.dokumenKk, title: 'Kartu Keluarga' });
-                                        if (Array.isArray(warga.dokumenKtp)) {
-                                          warga.dokumenKtp.forEach((ktp: string, i: number) => docs.push({ url: ktp, title: `KTP ${i + 1}` }));
-                                        } else if (warga.dokumenKtp) {
-                                          docs.push({ url: warga.dokumenKtp, title: 'KTP' });
-                                        }
-                                        if (docs.length > 0) setPreviewDocs({ docs, currentIndex: 0, wargaName: warga.nama });
-                                      }}
-                                      className="text-xs text-blue-700 font-bold bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
-                                    >
-                                      Lihat File
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex flex-wrap justify-between items-end gap-2">
-                              <div>
-                                <h6 className="text-sm font-bold text-gray-800">Anggota Keluarga</h6>
-                                <p className="text-[10px] text-gray-500 mt-0.5">Kepala Kel: Usia {warga.umur || '-'} Thn</p>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {isKetuaRT && (
-                                  hasKk ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleExtractKK(warga.id)}
-                                      disabled={extractingId === warga.id}
-                                      className="flex items-center gap-1.5 text-xs text-white font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 px-3 py-1.5 rounded-xl disabled:opacity-50 transition-all shadow-sm cursor-pointer"
-                                    >
-                                      <icons.sparkles className="w-3.5 h-3.5" />
-                                      {extractingId === warga.id ? 'Mengekstrak KK...' : 'AI Extract KK'}
-                                    </button>
-                                  ) : (
-                                    <label className="flex items-center gap-1.5 text-xs text-indigo-700 font-bold bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200 hover:bg-indigo-100 transition-all shadow-xs cursor-pointer">
-                                      <icons.sparkles className="w-3.5 h-3.5" />
-                                      <span>{uploadingDocWargaId === warga.id || extractingId === warga.id ? 'Memproses...' : 'Upload & AI Extract KK'}</span>
-                                      <input
-                                        type="file"
-                                        accept="image/*,application/pdf"
-                                        className="hidden"
-                                        disabled={uploadingDocWargaId === warga.id || extractingId === warga.id}
-                                        onChange={(e) => handleUploadWargaDoc(warga, 'kk', e, true)}
-                                      />
-                                    </label>
-                                  )
-                                )}
-                                {canEditFamily && (
-                                  <button onClick={() => { setActiveWargaId(warga.id); setMemberForm({ name: '', role: '', age: '', tglLahir: '', jenisKelamin: 'Laki-laki' }); setEditingMember(null); setShowMemberForm(true); }} className="text-xs text-white font-bold bg-teal-600 hover:bg-teal-700 px-3 py-1.5 rounded-xl shadow-sm transition-colors cursor-pointer">
-                                    + Tambah
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* MEMBER LIST */}
-                          {members.length === 0 ? (
-                            <div className="bg-white rounded-2xl p-6 text-center border border-dashed border-gray-200">
-                              <p className="text-xs text-gray-400 font-medium">
-                                Belum ada tanggungan/anggota keluarga.
-                                {hasKk && isKetuaRT ? ' Klik tombol "AI Extract KK" di atas untuk mengisi anggota keluarga otomatis dari Kartu Keluarga.' : ''}
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="grid gap-2">
-                              {members.map((member: any, mIdx: number) => (
-                                <div key={`mem_${warga.id || idx}_${member.id || 'm'}_${mIdx}`} className="flex justify-between items-center bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600">
-                                      {(member.name || 'A').charAt(0)}
-                                    </div>
-                                    <div>
-                                      <p className="text-xs font-bold text-gray-800">{member.name}</p>
-                                      <p className="text-[10px] text-gray-500 bg-gray-50 inline-block px-1.5 py-0.5 rounded mt-0.5 border border-gray-100">{member.role}</p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-3">
-                                    <span className="text-xs font-semibold text-teal-600 bg-teal-50 px-2 py-1 rounded-lg">{member.age} Thn</span>
-                                    {canEditFamily && (
-                                      <div className="flex gap-1">
-                                        <button onClick={() => { setActiveWargaId(warga.id); setEditingMember(member); setMemberForm({ name: member.name || '', role: member.role || '', tglLahir: member.tglLahir || '', age: String(member.age || ''), jenisKelamin: inferJenisKelamin(member.name || '', member.role, member.jenisKelamin) }); setShowMemberForm(true); }} className="p-1.5 text-blue-500 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer" title="Edit Anggota"><icons.edit className="w-4 h-4" /></button>
-                                        {(isKetuaRT || currentUser?.id === warga.id || currentUser?.username === warga.username) && (
-                                          <button onClick={() => handleDeleteMember(warga.id, member.id || member._id || member.name)} className="p-1.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer" title="Hapus Anggota"><icons.delete className="w-4 h-4" /></button>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedWargaDetail(warga)}
+                    className="gr-warga-detail-trigger mx-4 mb-4 flex w-[calc(100%-2rem)] items-center justify-center gap-2 rounded-xl border border-teal-100 bg-teal-50 px-4 py-3 text-sm font-extrabold text-teal-800 shadow-sm transition hover:border-teal-200 hover:bg-teal-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-100"
+                    title={`Lihat data lengkap ${warga.nama || 'warga'} dan keluarga`}
+                    aria-label={`Lihat data lengkap ${warga.nama || 'warga'} dan keluarga`}
+                  >
+                    <icons.eye className="h-4 w-4" />
+                    <span>Lihat Data Lengkap & Keluarga</span>
+                  </button>
+                </article>
               );
             })}
 
@@ -4248,125 +3821,337 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
             )}
           </AnimatePresence>
 
-      {/* MODAL PRATINJAU FOTO PROFIL WARGA (PHOTO ONLY PREVIEW) */}
+      {/* MODAL DETAIL WARGA & SUSUNAN KELUARGA */}
       <AnimatePresence>
-        {previewPhotoWarga && (
-          <div 
-            className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md"
-            onClick={() => setPreviewPhotoWarga(null)}
-          >
+        {selectedWargaDetail && (() => {
+          const detail = selectedWargaDetail;
+          const detailCanViewFamily = isKetuaRT || isOwnAccount(detail);
+          const detailCanEditFamily = isKetuaRT || isOwnAccount(detail);
+          const detailCanViewPrivate = isKetuaRT || isOwnAccount(detail);
+          const detailCanEditWarga = isKetuaRT || isOwnAccount(detail) || isAdmin || currentUser?.role === 'developer';
+          const detailCanChangeUsername = isKetuaRT || isAdmin || currentUser?.role === 'developer' || currentUser?.role === 'pengurus' || currentUser?.role === 'sekretaris';
+          const detailCanManageAccount = (isAdmin || currentUser?.role === 'developer') && detail.id !== currentUser?.id;
+          const detailHasKk = Boolean(detail.hasKk || (detail.dokumenKk && String(detail.dokumenKk).trim() !== ''));
+          const detailHasKtp = Boolean(detail.hasKtp || (Array.isArray(detail.dokumenKtp) ? detail.dokumenKtp.length > 0 : Boolean(detail.dokumenKtp)));
+          const detailCanViewNoKk = isPrivilegedKkViewer || isOwnAccount(detail);
+          const detailMembers = Array.isArray(detail.members) ? detail.members : [];
+          const detailNoKk = detailCanViewNoKk ? getResolvedNoKk(detail) : '';
+          const detailRole = detail.role === 'admin' ? 'Ketua RT / Admin'
+            : detail.role === 'pengurus' ? 'Pengurus RT'
+            : detail.role === 'bendahara' ? 'Bendahara'
+            : detail.role === 'sekretaris' ? 'Sekretaris' : 'Warga';
+          const detailAddress = detail.alamat || 'Alamat belum dilengkapi';
+          const detailRtId = String(detail.rtId || currentUser?.rtId || localStorage.getItem('selected_rt') || '').replace(/^rt/i, '');
+          const detailRt = detail.rt || (detailRtId ? `RT ${detailRtId.padStart(2, '0')}` : 'RT');
+          const detailDate = detail.tglLahir ? formatTanggalLahirWarga(detail.tglLahir) : '';
+          const DetailField = ({ label, value }: { label: string; value: any }) => (
+            <div className="min-w-0 rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
+              <p className="text-[9px] font-extrabold uppercase tracking-[0.08em] text-slate-400">{label}</p>
+              <p className="mt-1 break-words text-xs sm:text-sm font-bold leading-relaxed text-slate-800">{value || 'Belum diisi'}</p>
+            </div>
+          );
+
+          return (
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 15 }}
-              transition={{ type: "spring", stiffness: 320, damping: 25 }}
-              className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full overflow-hidden border border-slate-100 relative p-5"
-              onClick={e => e.stopPropagation()}
+              key={`warga-detail-${detail.id || detail.username || detail.nama}`}
+              className="fixed inset-0 z-[145] flex items-end sm:items-center justify-center bg-slate-950/65 p-0 sm:p-5 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedWargaDetail(null)}
+              role="presentation"
             >
-              {/* Header Modal */}
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-                <div className="min-w-0 pr-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-slate-800 text-base truncate">
-                      {previewPhotoWarga.nama}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200">
-                      {previewPhotoWarga.role === 'admin'
-                        ? 'Ketua RT'
-                        : previewPhotoWarga.role === 'pengurus'
-                        ? 'Pengurus RT'
-                        : previewPhotoWarga.role === 'bendahara'
-                        ? 'Bendahara'
-                        : previewPhotoWarga.role === 'sekretaris'
-                        ? 'Sekretaris'
-                        : 'Warga'}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-400">
-                      {previewPhotoWarga.alamat || 'RT 01'}
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setPreviewPhotoWarga(null)}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 flex items-center justify-center font-bold text-sm transition-colors cursor-pointer shrink-0"
-                  title="Tutup"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Tampilan Foto Profil Utama */}
-              <div className="w-full aspect-square rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center relative shadow-inner border border-slate-200">
-                {previewPhotoWarga.photo ? (
-                  <img 
-                    src={previewPhotoWarga.photo} 
-                    alt={previewPhotoWarga.nama} 
-                    className="w-full h-full object-contain" 
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center p-6 text-center text-slate-400">
-                    <div className="w-20 h-20 rounded-full bg-slate-800 text-teal-400 flex items-center justify-center text-3xl font-black mb-3 border-2 border-slate-700">
-                      {(previewPhotoWarga.nama || 'W').charAt(0).toUpperCase()}
-                    </div>
-                    <p className="text-xs font-bold text-slate-300">Belum Mengunggah Foto Profil</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Foto kustom belum diatur pada akun ini</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Rincian Profil & No. KK di Modal Pratinjau */}
-              <div className="mt-3 space-y-2">
-                {getResolvedNoKk(previewPhotoWarga) ? (
-                  <div className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200/90 rounded-2xl p-2.5 flex items-center justify-between gap-2 shadow-2xs">
-                    <div className="min-w-0">
-                      <p className="text-[9px] font-extrabold text-teal-700 uppercase tracking-wider">No. Kartu Keluarga (KK)</p>
-                      <p className="font-mono font-black text-xs sm:text-sm text-teal-950 tracking-wider mt-0.5 truncate">
-                        {getResolvedNoKk(previewPhotoWarga)}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const num = getResolvedNoKk(previewPhotoWarga);
-                        navigator.clipboard.writeText(num);
-                        showStatusBanner(`No. KK ${num} berhasil disalin!`);
-                      }}
-                      className="px-2.5 py-1 text-[10px] font-extrabold bg-white hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-xl transition-colors cursor-pointer shadow-xs shrink-0"
-                    >
-                      Salin
-                    </button>
-                  </div>
-                ) : null}
-
-                <div className="grid grid-cols-2 gap-2 text-left">
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase">Status Warga</p>
-                    <p className="text-xs font-bold text-slate-800 mt-0.5 truncate">{previewPhotoWarga.status || 'Warga Tetap'}</p>
-                  </div>
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase">Keluarga</p>
-                    <p className="text-xs font-bold text-teal-700 mt-0.5 truncate">
-                      👨‍👩‍👧‍👦 {((previewPhotoWarga.members || []).length) + 1} Jiwa
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tombol Tutup */}
-              <button
-                type="button"
-                onClick={() => setPreviewPhotoWarga(null)}
-                className="w-full mt-4 py-3 bg-teal-600 hover:bg-teal-700 active:scale-98 text-white font-extrabold text-xs rounded-2xl shadow-md transition-all cursor-pointer"
+              <motion.section
+                initial={{ opacity: 0, y: 28, scale: 0.985 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.985 }}
+                transition={{ type: 'spring', stiffness: 280, damping: 28 }}
+                onClick={(event) => event.stopPropagation()}
+                className="gr-warga-detail-modal flex max-h-[94dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[28px] border border-white/70 bg-[#f7fbfa] shadow-2xl sm:rounded-[28px]"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="warga-detail-title"
               >
-                Tutup Pratinjau Foto
-              </button>
+                <div className="relative shrink-0 overflow-hidden bg-gradient-to-br from-teal-700 via-teal-600 to-emerald-600 px-5 pb-5 pt-5 text-white sm:px-7 sm:pt-6">
+                  <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
+                  <div className="relative flex items-start justify-between gap-4">
+                    <div className="flex min-w-0 items-center gap-3.5">
+                      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-white/30 bg-white/15 shadow-lg">
+                        {detail.photo ? <img src={detail.photo} alt={detail.nama || 'Foto warga'} className="h-full w-full object-cover" /> : (
+                          <div className="flex h-full w-full items-center justify-center text-xl font-black text-white">{String(detail.nama || 'W').trim().charAt(0).toUpperCase()}</div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-teal-100">Direktori Warga</p>
+                        <h3 id="warga-detail-title" className="mt-1 break-words text-lg font-black leading-tight text-white sm:text-xl">{detail.nama || 'Nama warga'}</h3>
+                        <p className="mt-1 text-[11px] font-semibold text-teal-50">{detailAddress}</p>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          <span className="rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-[9px] font-extrabold text-white">{detailRole}</span>
+                          <span className="rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-[9px] font-extrabold text-white">{detailRt}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setSelectedWargaDetail(null)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/15 text-white transition hover:bg-white/25" aria-label="Tutup detail warga">✕</button>
+                  </div>
+                  <div className="relative mt-5 grid grid-cols-3 gap-2">
+                    <div className="rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5">
+                      <p className="text-[9px] font-bold text-teal-100">Anggota Keluarga</p>
+                      <p className="mt-0.5 text-lg font-black text-white">{detailCanViewFamily ? detailMembers.length + 1 : '—'}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5">
+                      <p className="text-[9px] font-bold text-teal-100">Status Akun</p>
+                      <p className="mt-1 text-xs font-extrabold text-white">{detail.isApproved === true ? 'Aktif' : detail.isApproved === false ? 'Belum Aktif' : '—'}</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/15 bg-white/10 px-3 py-2.5">
+                      <p className="text-[9px] font-bold text-teal-100">Unit Rumah</p>
+                      <p className="mt-1 truncate text-xs font-extrabold text-white">{parseHouseInfo(detail).shortCode || '—'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-5 sm:px-7">
+                  <section>
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900">Informasi Warga</h4>
+                        <p className="mt-0.5 text-[10px] font-medium text-slate-500">Data identitas dan domisili yang tercatat pada aplikasi.</p>
+                      </div>
+                      <span className="rounded-full border border-teal-100 bg-teal-50 px-2.5 py-1 text-[9px] font-extrabold text-teal-800">Profil</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                      <DetailField label="Nama Lengkap" value={detail.nama} />
+                      <DetailField label="Username" value={detail.username ? `@${detail.username}` : 'Belum diatur'} />
+                      <DetailField label="Jenis Kelamin" value={detail.jenisKelamin} />
+                      <DetailField label="Tanggal Lahir / Usia" value={[detailDate, detail.umur ? `${detail.umur} tahun` : ''].filter(Boolean).join(' · ')} />
+                      <DetailField label="Status Warga" value={detail.status || 'Warga Tetap'} />
+                      <DetailField label="Peran di Aplikasi" value={detailRole} />
+                      <DetailField label="Alamat / Unit Rumah" value={detailAddress} />
+                      <DetailField label="Wilayah RT" value={detailRt} />
+                      {detailCanViewPrivate && <DetailField label="Nomor Ponsel" value={detail.noHp || detail.phone || 'Belum diisi'} />}
+                      {detailCanViewNoKk && detailNoKk && <DetailField label="Nomor Kartu Keluarga" value={detailNoKk} />}
+                      {detailCanViewPrivate && <DetailField label="Dokumen KK" value={detail.dokumenKk || detail.hasKk ? 'Tersedia' : 'Belum diunggah'} />}
+                      {detailCanViewPrivate && <DetailField label="Dokumen KTP" value={Array.isArray(detail.dokumenKtp) ? (detail.dokumenKtp.length ? `${detail.dokumenKtp.length} file tersedia` : 'Belum diunggah') : (detail.dokumenKtp || detail.hasKtp) ? 'Tersedia' : 'Belum diunggah'} />}
+                    </div>
+                  </section>
+
+                  {detailCanViewPrivate && (detail.kkCategory || detail.wilayahKk || detail.alamatKk || detail.kkAlamatLengkap || detail.kkKecamatan || detail.kkKelurahan || detail.kkKabupatenKota || detail.kkProvinsi) && (
+                    <section className="rounded-2xl border border-teal-100 bg-white p-4">
+                      <div className="mb-3 flex items-center gap-2">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-50 text-base">⌂</span>
+                        <div><h4 className="text-sm font-black text-slate-900">Domisili pada Kartu Keluarga</h4><p className="text-[10px] text-slate-500">Informasi wilayah asal KK yang tersedia.</p></div>
+                      </div>
+                      <p className="text-xs font-bold leading-relaxed text-slate-800">{detail.alamatKk || detail.kkAlamatLengkap || 'Alamat KK belum dilengkapi.'}</p>
+                      <div className="mt-3 grid grid-cols-1 gap-2 border-t border-slate-100 pt-3 sm:grid-cols-2">
+                        {(detail.kkCategory || detail.wilayahKk) && <DetailField label="Kategori Wilayah KK" value={detail.kkCategory || detail.wilayahKk} />}
+                        {detail.kkKelurahan && <DetailField label="Kelurahan / Desa" value={detail.kkKelurahan} />}
+                        {detail.kkKecamatan && <DetailField label="Kecamatan" value={detail.kkKecamatan} />}
+                        {detail.kkKabupatenKota && <DetailField label="Kabupaten / Kota" value={detail.kkKabupatenKota} />}
+                        {detail.kkProvinsi && <DetailField label="Provinsi" value={detail.kkProvinsi} />}
+                      </div>
+                    </section>
+                  )}
+
+                  <section>
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div><h4 className="text-sm font-black text-slate-900">Informasi Keluarga</h4><p className="mt-0.5 text-[10px] text-slate-500">Susunan kepala keluarga dan anggota yang tercatat.</p></div>
+                      {detailCanViewFamily && <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[9px] font-extrabold text-emerald-700">{detailMembers.length + 1} Jiwa</span>}
+                    </div>
+                    {detailCanViewFamily ? (
+                      <div className="space-y-2.5">
+                        <div className="flex items-start gap-3 rounded-2xl border border-teal-200 bg-gradient-to-r from-teal-50 to-emerald-50 p-3.5">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-sm font-black text-white">{String(detail.nama || 'K').trim().charAt(0).toUpperCase()}</div>
+                          <div className="min-w-0 flex-1"><p className="break-words text-xs font-black text-slate-900">{detail.nama || 'Kepala Keluarga'}</p><p className="mt-0.5 text-[10px] font-bold text-teal-800">Kepala Keluarga{detail.jenisKelamin ? ` · ${detail.jenisKelamin}` : ''}</p><p className="mt-1 text-[10px] text-slate-500">{[detail.umur ? `${detail.umur} tahun` : '', detail.tglLahir ? formatTanggalLahirWarga(detail.tglLahir) : ''].filter(Boolean).join(' · ') || 'Data usia belum tersedia'}</p></div>
+                          <span className="rounded-lg bg-white px-2 py-1 text-[9px] font-extrabold text-teal-700">KK Utama</span>
+                        </div>
+                        {detailMembers.length > 0 ? detailMembers.map((member: any, index: number) => {
+                          const memberName = String(member?.name || member?.nama || `Anggota ${index + 1}`);
+                          const memberAge = member?.age ?? member?.umur;
+                          return (
+                            <div key={String(member?.id || member?._id || `${memberName}-${index}`)} className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-white p-3.5 shadow-[0_3px_14px_rgba(15,68,65,0.035)]">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sm font-black text-sky-700">{memberName.trim().charAt(0).toUpperCase() || 'A'}</div>
+                              <div className="min-w-0 flex-1"><p className="break-words text-xs font-black text-slate-900">{memberName}</p><p className="mt-0.5 text-[10px] font-bold text-slate-500">{member.role || 'Anggota Keluarga'}{member.jenisKelamin ? ` · ${member.jenisKelamin}` : ''}</p><p className="mt-1 text-[10px] text-slate-500">{[memberAge !== undefined && memberAge !== null && memberAge !== '' ? `${memberAge} tahun` : '', member.tglLahir ? formatTanggalLahirWarga(member.tglLahir) : ''].filter(Boolean).join(' · ') || 'Data usia belum tersedia'}</p></div>
+                              {detailCanEditFamily && (
+                                <div className="flex shrink-0 items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveWargaId(detail.id);
+                                      setEditingMember(member);
+                                      setMemberForm({ name: member.name || member.nama || '', role: member.role || '', tglLahir: member.tglLahir || '', age: String(member.age ?? member.umur ?? ''), jenisKelamin: inferJenisKelamin(member.name || member.nama || '', member.role, member.jenisKelamin) });
+                                      setSelectedWargaDetail(null);
+                                      setShowMemberForm(true);
+                                    }}
+                                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-700 transition hover:bg-blue-100"
+                                    title="Edit anggota keluarga"
+                                    aria-label={`Edit ${memberName}`}
+                                  ><icons.edit className="h-3.5 w-3.5" /></button>
+                                  {(isKetuaRT || currentUser?.id === detail.id || currentUser?.username === detail.username) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteMember(detail.id, member.id || member._id || member.name || member.nama)}
+                                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                                      title="Hapus anggota keluarga"
+                                      aria-label={`Hapus ${memberName}`}
+                                    ><icons.delete className="h-3.5 w-3.5" /></button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }) : (
+                          <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-6 text-center"><p className="text-xs font-bold text-slate-600">Belum ada anggota keluarga tambahan.</p><p className="mt-1 text-[10px] text-slate-500">Pengurus dapat melengkapi data anggota melalui fitur pengelolaan keluarga.</p></div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                        <p className="text-xs font-extrabold text-amber-900">Informasi keluarga dibatasi</p>
+                        <p className="mt-1 text-[11px] leading-relaxed text-amber-800">Susunan anggota keluarga hanya dapat dilihat oleh Ketua RT atau pemilik akun keluarga. Pembatasan ini menjaga kerahasiaan data pribadi warga.</p>
+                      </div>
+                    )}
+                  </section>
+
+                  {(detailCanEditWarga || detailCanChangeUsername || detailCanManageAccount || detailCanEditFamily || detailCanViewPrivate) && (
+                    <section className="rounded-3xl border border-teal-100 bg-white p-4 shadow-sm sm:p-5">
+                      <div className="mb-4">
+                        <h4 className="text-sm font-black text-slate-900">Aksi Pengelolaan</h4>
+                        <p className="mt-0.5 text-[10px] text-slate-500">Aksi tersedia sesuai peran dan hak akses akun.</p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {detailCanEditWarga && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setWargaEditForm({
+                                id: detail.id,
+                                username: detail.username || '',
+                                nama: detail.nama || '',
+                                noHp: detail.noHp || '',
+                                status: detail.status || 'Warga Tetap',
+                                umur: detail.umur ? String(detail.umur) : '',
+                                tglLahir: detail.tglLahir || '',
+                                jenisKelamin: inferJenisKelamin(detail.nama || '', 'Kepala Keluarga', detail.jenisKelamin),
+                                noKk: detail.noKk || '',
+                                alamat: detail.alamat || ''
+                              });
+                              setEditingWarga(detail);
+                              setSelectedWargaDetail(null);
+                              setShowWargaEditModal(true);
+                            }}
+                            className="rounded-xl border border-teal-200 bg-teal-50 px-3 py-2.5 text-xs font-extrabold text-teal-800 transition hover:bg-teal-100"
+                          ><icons.edit className="mr-1.5 inline h-3.5 w-3.5" />Edit Data Warga</button>
+                        )}
+                        {detailCanChangeUsername && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUsernameTargetWarga(detail);
+                              setNewUsernameInput(detail.username || '');
+                              setSelectedWargaDetail(null);
+                              setShowKetuaRtUsernameModal(true);
+                            }}
+                            className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-extrabold text-amber-800 transition hover:bg-amber-100"
+                          >Ubah Username</button>
+                        )}
+                        {detailCanViewPrivate && detailHasKk && isKetuaRT && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const reg = resolveWargaKkRegion(detail);
+                              setEditingKkRegionWarga(detail);
+                              setRegionFormCategory(reg.category === 'Belum Teridentifikasi' ? '' : reg.category as any);
+                              setRegionFormAlamat(detail.alamatKk || reg.alamat || '');
+                              setRegionFormKecamatan(detail.kkKecamatan || reg.kecamatan || '');
+                              setRegionFormKelurahan(detail.kkKelurahan || reg.kelurahan || '');
+                              setRegionFormKabupatenKota(detail.kkKabupatenKota || reg.kabupatenKota || (reg.category === 'Kabupaten Tangerang' ? 'Kabupaten Tangerang' : reg.category === 'Kota Tangerang' ? 'Kota Tangerang' : ''));
+                              setRegionFormProvinsi(detail.kkProvinsi || reg.provinsi || ((reg.category === 'Kabupaten Tangerang' || reg.category === 'Kota Tangerang') ? 'Banten' : ''));
+                              setSelectedWargaDetail(null);
+                            }}
+                            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-extrabold text-slate-700 transition hover:bg-slate-100"
+                          >Ubah Wilayah KK</button>
+                        )}
+                        {detailCanViewPrivate && (detailHasKk || detailHasKtp) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const docs: { url: string; title: string }[] = [];
+                              if (detail.dokumenKk) docs.push({ url: detail.dokumenKk, title: 'Kartu Keluarga' });
+                              if (Array.isArray(detail.dokumenKtp)) detail.dokumenKtp.forEach((ktp: string, i: number) => docs.push({ url: ktp, title: `KTP ${i + 1}` }));
+                              else if (detail.dokumenKtp) docs.push({ url: detail.dokumenKtp, title: 'KTP' });
+                              if (docs.length > 0) setPreviewDocs({ docs, currentIndex: 0, wargaName: detail.nama });
+                            }}
+                            className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs font-extrabold text-sky-800 transition hover:bg-sky-100"
+                          >Lihat Dokumen</button>
+                        )}
+                      </div>
+
+                      {detailCanViewPrivate && (
+                        <div className="mt-4 border-t border-slate-100 pt-4">
+                          <p className="mb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Dokumen warga</p>
+                          <div className="flex flex-wrap gap-2">
+                            <label className={`cursor-pointer rounded-xl border px-3 py-2.5 text-xs font-extrabold transition ${uploadingDocWargaId === detail.id ? 'pointer-events-none border-slate-200 bg-slate-100 text-slate-400' : 'border-teal-200 bg-teal-50 text-teal-800 hover:bg-teal-100'}`}>
+                              {uploadingDocWargaId === detail.id ? 'Memproses...' : detailHasKk ? 'Ganti KK' : 'Upload KK'}
+                              <input type="file" accept="image/*,application/pdf" className="hidden" disabled={uploadingDocWargaId === detail.id} onChange={(e) => handleUploadWargaDoc(detail, 'kk', e)} />
+                            </label>
+                            <label className="cursor-pointer rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-xs font-extrabold text-indigo-800 transition hover:bg-indigo-100">
+                              Upload KTP
+                              <input type="file" accept="image/*,application/pdf" multiple className="hidden" disabled={uploadingDocWargaId === detail.id} onChange={(e) => handleUploadWargaDoc(detail, 'ktp', e)} />
+                            </label>
+                            {isKetuaRT && (
+                              detailHasKk ? (
+                                <button type="button" onClick={() => handleExtractKK(detail.id)} disabled={extractingId === detail.id} className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-xs font-extrabold text-violet-800 transition hover:bg-violet-100 disabled:opacity-50">
+                                  {extractingId === detail.id ? 'Mengekstrak KK...' : 'AI Extract KK'}
+                                </button>
+                              ) : (
+                                <label className="cursor-pointer rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-xs font-extrabold text-violet-800 transition hover:bg-violet-100">
+                                  Upload & AI Extract KK
+                                  <input type="file" accept="image/*,application/pdf" className="hidden" disabled={uploadingDocWargaId === detail.id || extractingId === detail.id} onChange={(e) => handleUploadWargaDoc(detail, 'kk', e, true)} />
+                                </label>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {detailCanManageAccount && (
+                        <div className="mt-4 grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2">
+                          <label className="block">
+                            <span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Role Akun</span>
+                            <select value={detail.role || 'warga'} onChange={async (e) => { await apiFetch(`/api/warga/${detail.id}/role`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: e.target.value }) }); fetchWarga(); }} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-teal-500">
+                              {currentUser?.role === 'developer' && <option value="admin">Admin</option>}
+                              <option value="warga">Warga</option><option value="pengurus">Pengurus</option><option value="bendahara">Bendahara</option><option value="sekretaris">Sekretaris</option>
+                            </select>
+                          </label>
+                          <label className="block">
+                            <span className="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Status Akun</span>
+                            <select value={detail.isApproved ? 'aktif' : 'tidak_aktif'} onChange={async (e) => { await apiFetch(`/api/warga/${detail.id}/approval`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isApproved: e.target.value === 'aktif' }) }); fetchWarga(); }} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-700 outline-none focus:border-teal-500">
+                              <option value="aktif">Aktif</option><option value="tidak_aktif">Nonaktif / Belum disetujui</option>
+                            </select>
+                          </label>
+                          <button type="button" onClick={() => { setWargaToDelete(detail); setSelectedWargaDetail(null); }} className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-extrabold text-rose-700 transition hover:bg-rose-100 sm:col-span-2">
+                            <icons.trash className="h-3.5 w-3.5" />Hapus Data Warga
+                          </button>
+                        </div>
+                      )}
+
+                      {detailCanEditFamily && (
+                        <div className="mt-4 border-t border-slate-100 pt-4">
+                          <button type="button" onClick={() => { setActiveWargaId(detail.id); setMemberForm({ name: '', role: '', age: '', tglLahir: '', jenisKelamin: 'Laki-laki' }); setEditingMember(null); setSelectedWargaDetail(null); setShowMemberForm(true); }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition hover:bg-teal-700">
+                            <span className="text-base leading-none">+</span> Tambah Anggota Keluarga
+                          </button>
+                        </div>
+                      )}
+                    </section>
+                  )}
+                </div>
+
+                <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom))] sm:px-7">
+                  <button type="button" onClick={() => setSelectedWargaDetail(null)} className="w-full rounded-xl bg-teal-600 px-4 py-3 text-xs font-extrabold text-white shadow-sm transition hover:bg-teal-700">Tutup Detail</button>
+                </div>
+              </motion.section>
             </motion.div>
-          </div>
-        )}
+          );
+        })()}
       </AnimatePresence>
 
       {/* Document Preview Modal */}
