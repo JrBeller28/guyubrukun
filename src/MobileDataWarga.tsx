@@ -669,6 +669,20 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
   const [filterBlok, setFilterBlok] = useState('');
   const [filterAgeCategory, setFilterAgeCategory] = useState<'' | 'balita' | 'anak' | 'remaja' | 'dewasa' | 'lansia'>('');
   const [previewDocs, setPreviewDocs] = useState<{ docs: { url: string; title: string }[]; currentIndex: number; wargaName: string } | null>(null);
+  const [previewWargaPhoto, setPreviewWargaPhoto] = useState<{ url: string; name: string } | null>(null);
+  useEffect(() => {
+    if (!previewWargaPhoto) return;
+    const previousOverflow = document.body.style.overflow;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPreviewWargaPhoto(null);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [previewWargaPhoto]);
   const [extractingId, setExtractingId] = useState<string | null>(null);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
 
@@ -3500,10 +3514,14 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                   className={`mobile-warga-card gr-warga-directory-card group overflow-hidden rounded-[1.5rem] border bg-white transition-all duration-200 ${isCurrentUser ? 'border-teal-200 ring-1 ring-teal-100' : 'border-slate-100'}`}
                 >
                   <div className="flex items-center gap-3.5 p-4 sm:p-5">
-                    {/* Foto menjadi identitas statis; detail dibuka melalui tombol View di bawah kartu. */}
-                    <div
-                      className="gr-warga-avatar relative h-[58px] w-[58px] shrink-0 overflow-hidden rounded-2xl border border-slate-100 bg-teal-50 text-teal-800 shadow-sm"
-                      aria-label={`Foto ${warga.nama || 'warga'}`}
+                    {/* Foto bisa diketuk untuk melihat ukuran penuh; detail keluarga tetap melalui tombol View. */}
+                    <button
+                      type="button"
+                      onClick={() => warga.photo && setPreviewWargaPhoto({ url: warga.photo, name: warga.nama || 'Warga' })}
+                      disabled={!warga.photo}
+                      className="gr-warga-avatar relative h-[58px] w-[58px] shrink-0 overflow-hidden rounded-2xl border border-slate-100 bg-teal-50 text-teal-800 shadow-sm disabled:cursor-default"
+                      aria-label={warga.photo ? `Lihat foto ${warga.nama || 'warga'}` : `Foto ${warga.nama || 'warga'} belum tersedia`}
+                      title={warga.photo ? 'Ketuk untuk melihat foto' : 'Foto belum tersedia'}
                     >
                       {warga.photo ? (
                         <img src={warga.photo} alt={warga.nama || 'Foto warga'} className="h-full w-full object-cover" />
@@ -3513,7 +3531,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                         </span>
                       )}
                       <span className={`absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full border-2 border-white ${warga.isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                    </div>
+                    </button>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -3539,7 +3557,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                         {warga.username && <span className="truncate font-medium">@{warga.username}</span>}
                       </div>
 
-                      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                      <div className="gr-warga-meta-badges mt-2.5 flex flex-wrap items-center gap-1.5">
                         <span className="rounded-lg border border-sky-100 bg-sky-50 px-2 py-1 text-[10px] font-bold text-sky-700">{warga.rt || 'RT 01'}</span>
                         <span className="rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-600">{members.length + 1} anggota keluarga</span>
                         <span className={`rounded-lg px-2 py-1 text-[10px] font-semibold ${hasKk ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
@@ -3843,7 +3861,17 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
           const detailAddress = detail.alamat || 'Alamat belum dilengkapi';
           const detailRtId = String(detail.rtId || currentUser?.rtId || localStorage.getItem('selected_rt') || '').replace(/^rt/i, '');
           const detailRt = detail.rt || (detailRtId ? `RT ${detailRtId.padStart(2, '0')}` : 'RT');
-          const detailDate = detail.tglLahir ? formatTanggalLahirWarga(detail.tglLahir) : '';
+          // Terima beberapa nama field tanggal lahir agar data lama dan baru tetap terbaca.
+          const detailDobRaw = String(
+            detail.tglLahir || detail.tanggalLahir || detail.birthDate || detail.dateOfBirth || detail.dob || ''
+          ).trim();
+          const detailDate = detailDobRaw ? formatTanggalLahirWarga(detailDobRaw) : '';
+          const detailAgeValue = detail.umur ?? detail.age;
+          const detailAge = detailAgeValue !== undefined && detailAgeValue !== null && String(detailAgeValue).trim() !== ''
+            ? `${detailAgeValue} tahun`
+            : detailDobRaw && calculateAge(detailDobRaw)
+              ? `${calculateAge(detailDobRaw)} tahun`
+              : '';
           const DetailField = ({ label, value }: { label: string; value: any }) => (
             <div className="min-w-0 rounded-2xl border border-slate-100 bg-slate-50/80 p-3">
               <p className="text-[9px] font-extrabold uppercase tracking-[0.08em] text-slate-400">{label}</p>
@@ -3918,11 +3946,12 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                       </div>
                       <span className="rounded-full border border-teal-100 bg-teal-50 px-2.5 py-1 text-[9px] font-extrabold text-teal-800">Profil</span>
                     </div>
-                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                    <div className="gr-warga-detail-fields grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                       <DetailField label="Nama Lengkap" value={detail.nama} />
                       <DetailField label="Username" value={detail.username ? `@${detail.username}` : 'Belum diatur'} />
                       <DetailField label="Jenis Kelamin" value={detail.jenisKelamin} />
-                      <DetailField label="Tanggal Lahir / Usia" value={[detailDate, detail.umur ? `${detail.umur} tahun` : ''].filter(Boolean).join(' · ')} />
+                      <DetailField label="Tanggal Lahir Kepala Keluarga" value={detailDate || 'Belum diisi'} />
+                      <DetailField label="Usia Kepala Keluarga" value={detailAge || 'Belum diketahui'} />
                       <DetailField label="Status Warga" value={detail.status || 'Warga Tetap'} />
                       <DetailField label="Peran di Aplikasi" value={detailRole} />
                       <DetailField label="Alamat / Unit Rumah" value={detailAddress} />
@@ -3941,7 +3970,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                         <div><h4 className="text-sm font-black text-slate-900">Domisili pada Kartu Keluarga</h4><p className="text-[10px] text-slate-500">Informasi wilayah asal KK yang tersedia.</p></div>
                       </div>
                       <p className="text-xs font-bold leading-relaxed text-slate-800">{detail.alamatKk || detail.kkAlamatLengkap || 'Alamat KK belum dilengkapi.'}</p>
-                      <div className="mt-3 grid grid-cols-1 gap-2 border-t border-slate-100 pt-3 sm:grid-cols-2">
+                      <div className="gr-warga-detail-fields mt-3 grid grid-cols-1 gap-2 border-t border-slate-100 pt-3 sm:grid-cols-2">
                         {(detail.kkCategory || detail.wilayahKk) && <DetailField label="Kategori Wilayah KK" value={detail.kkCategory || detail.wilayahKk} />}
                         {detail.kkKelurahan && <DetailField label="Kelurahan / Desa" value={detail.kkKelurahan} />}
                         {detail.kkKecamatan && <DetailField label="Kecamatan" value={detail.kkKecamatan} />}
@@ -3960,7 +3989,12 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                       <div className="space-y-2.5">
                         <div className="flex items-start gap-3 rounded-2xl border border-teal-200 bg-gradient-to-r from-teal-50 to-emerald-50 p-3.5">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-600 text-sm font-black text-white">{String(detail.nama || 'K').trim().charAt(0).toUpperCase()}</div>
-                          <div className="min-w-0 flex-1"><p className="break-words text-xs font-black text-slate-900">{detail.nama || 'Kepala Keluarga'}</p><p className="mt-0.5 text-[10px] font-bold text-teal-800">Kepala Keluarga{detail.jenisKelamin ? ` · ${detail.jenisKelamin}` : ''}</p><p className="mt-1 text-[10px] text-slate-500">{[detail.umur ? `${detail.umur} tahun` : '', detail.tglLahir ? formatTanggalLahirWarga(detail.tglLahir) : ''].filter(Boolean).join(' · ') || 'Data usia belum tersedia'}</p></div>
+                          <div className="min-w-0 flex-1">
+                            <p className="break-words text-xs font-black text-slate-900">{detail.nama || 'Kepala Keluarga'}</p>
+                            <p className="mt-0.5 text-[10px] font-bold text-teal-800">Kepala Keluarga{detail.jenisKelamin ? ` · ${detail.jenisKelamin}` : ''}</p>
+                            <p className="mt-1 break-words text-[10px] leading-relaxed text-slate-600">Tanggal lahir: <span className="font-bold text-slate-700">{detailDate || 'Belum diisi'}</span></p>
+                            <p className="mt-0.5 text-[10px] text-slate-500">Usia: {detailAge || 'Belum diketahui'}</p>
+                          </div>
                           <span className="rounded-lg bg-white px-2 py-1 text-[9px] font-extrabold text-teal-700">KK Utama</span>
                         </div>
                         {detailMembers.length > 0 ? detailMembers.map((member: any, index: number) => {
@@ -4029,7 +4063,7 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
                                 noHp: detail.noHp || '',
                                 status: detail.status || 'Warga Tetap',
                                 umur: detail.umur ? String(detail.umur) : '',
-                                tglLahir: detail.tglLahir || '',
+                                tglLahir: detailDobRaw,
                                 jenisKelamin: inferJenisKelamin(detail.nama || '', 'Kepala Keluarga', detail.jenisKelamin),
                                 noKk: detail.noKk || '',
                                 alamat: detail.alamat || ''
@@ -4152,6 +4186,51 @@ export const MobileDataWarga = ({ onBack, currentUser }: { onBack: () => void, c
             </motion.div>
           );
         })()}
+      </AnimatePresence>
+
+      {/* FOTO WARGA — pratinjau terpisah dari detail keluarga */}
+      <AnimatePresence>
+        {previewWargaPhoto && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="gr-warga-photo-preview fixed inset-0 z-[175] flex items-center justify-center bg-slate-950/90 p-3 backdrop-blur-sm sm:p-6"
+            onClick={() => setPreviewWargaPhoto(null)}
+            role="presentation"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ duration: 0.18 }}
+              className="relative flex max-h-[94dvh] w-full max-w-3xl flex-col items-center justify-center gap-3"
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Foto ${previewWargaPhoto.name}`}
+            >
+              <div className="flex w-full items-center justify-between gap-3 px-1 text-white">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-teal-200">Foto warga</p>
+                  <h3 className="truncate text-sm font-extrabold sm:text-base">{previewWargaPhoto.name}</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewWargaPhoto(null)}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xl text-white transition hover:bg-white/20"
+                  aria-label="Tutup foto"
+                >✕</button>
+              </div>
+              <img
+                src={previewWargaPhoto.url}
+                alt={`Foto ${previewWargaPhoto.name}`}
+                className="max-h-[calc(94dvh-76px)] max-w-full rounded-2xl object-contain shadow-2xl"
+              />
+              <p className="text-center text-[11px] font-medium text-white/65">Ketuk area di luar foto atau tombol ✕ untuk menutup.</p>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Document Preview Modal */}
